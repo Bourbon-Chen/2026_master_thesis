@@ -11,7 +11,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-DEFAULT_INPUT = PROJECT_ROOT / "data" / "MT_UPDATE_MS_HEV_NORcleaned.csv"
+DEFAULT_INPUT = PROJECT_ROOT / "data" / "MT_UPDATE_MS_HEV_v2_NORcleaned.csv"
 RISK_COLUMNS = {
     "pf": "PF_Index_Risk_equal",
     "tf": "TF_Index_Risk_equal",
@@ -40,6 +40,11 @@ def default_output_path(input_path: Path, scenario: str, threshold: float) -> Pa
         input_path.parent
         / f"{input_path.stem}_{scenario}_risk_gt_{threshold_tag(threshold)}{input_path.suffix}"
     )
+
+
+def prompt_input_path(default_path: Path = DEFAULT_INPUT) -> Path:
+    entered_path = input(f"Enter input CSV path [{default_path}]: ").strip()
+    return Path(entered_path) if entered_path else default_path
 
 
 def prompt_scenario() -> str:
@@ -119,8 +124,11 @@ def parse_args() -> argparse.Namespace:
         "-i",
         "--input",
         type=Path,
-        default=DEFAULT_INPUT,
-        help=f"Input CSV path (default: {DEFAULT_INPUT})",
+        default=None,
+        help=(
+            "Input CSV path "
+            f"(prompted when omitted; blank uses: {DEFAULT_INPUT})"
+        ),
     )
     parser.add_argument(
         "-o",
@@ -151,7 +159,9 @@ def main() -> None:
     scenario = args.scenario if args.scenario is not None else prompt_scenario()
     threshold = args.threshold if args.threshold is not None else prompt_threshold()
 
-    input_path = args.input.resolve()
+    input_path = (
+        args.input if args.input is not None else prompt_input_path()
+    ).resolve()
     output_path = (
         args.output.resolve()
         if args.output is not None

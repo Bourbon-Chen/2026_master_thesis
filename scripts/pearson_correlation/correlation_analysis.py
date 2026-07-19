@@ -9,6 +9,7 @@ features. Correlation identifies linear association, not causation.
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
@@ -30,6 +31,28 @@ INPUT_FILE = PROJECT_DIRECTORY / "data" / "MT_UPDATE_MS_HEV_v2_NORcleaned.csv"
 OUTPUT_DIRECTORY = PROJECT_DIRECTORY / "outputs_correlation"
 CORRELATION_THRESHOLD = 0.6
 IDENTIFIER_COLUMNS = ("fid", "MS_ID")
+
+
+def prompt_input_path(default_path: Path = INPUT_FILE) -> Path:
+    """Prompt for an input CSV path, using the configured path when blank."""
+    entered_path = input(f"Enter input CSV path [{default_path}]: ").strip()
+    return Path(entered_path) if entered_path else default_path
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command-line options for the correlation analysis."""
+    parser = argparse.ArgumentParser(
+        description="Analyze Pearson correlations among PF and TF clustering candidates."
+    )
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=Path,
+        default=None,
+        help=f"Input CSV path (prompted when omitted; blank uses: {INPUT_FILE})",
+    )
+    return parser.parse_args()
+
 
 PF_FEATURE_GROUPS: Dict[str, Sequence[str]] = {
     "flood_exposure": ["Per_extent"],
@@ -838,8 +861,12 @@ def analyze_scenario(
 
 def main() -> None:
     """Run PF and TF Pearson correlation analyses and save all outputs."""
+    args = parse_args()
+    input_file = (
+        args.input if args.input is not None else prompt_input_path()
+    ).resolve()
     print("Loading dataset...")
-    data = load_data(INPUT_FILE)
+    data = load_data(input_file)
     print(f"Dataset shape: {len(data)} rows × {len(data.columns)} columns")
     validate_columns(data, SCENARIO_FEATURE_GROUPS)
 
