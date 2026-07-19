@@ -1,8 +1,5 @@
 ﻿scenario,feature_1,group_1,feature_2,group_2,pearson_r,absolute_r,pairwise_n,same_group,correlation_direction,threshold_exceeded
-PF,N_PFlossR_2ktw,accessibility_loss,N_PFlossR_2kmw,accessibility_loss,0.8336959848576061,0.8336959848576061,94037,True,positive,True
-PF,PFAB2k_NOR,centrality_influence,PFAB5k_NOR,centrality_influence,0.7926409282283733,0.7926409282283733,107946,True,positive,True
-PF,PFResident_lossR,population_loss,PFPRM_lossR,population_loss,0.7472672699598211,0.7472672699598211,51012,True,positive,True
-PF,PFDaynight_lossR,population_loss,PFPRM_lossR,population_loss,0.692188895645175,0.692188895645175,51564,True,positive,True
-PF,N_PFlossR_2kiw,accessibility_loss,N_PFlossR_2kmw,accessibility_loss,0.6827184343802681,0.6827184343802681,44524,True,positive,True
-PF,N_PFlossR_2kiw,accessibility_loss,N_PFlossR_2ktw,accessibility_loss,0.6647288614571912,0.6647288614571912,44861,True,positive,True
-PF,PFResident_lossR,population_loss,PFDaynight_lossR,population_loss,0.6026761221326788,0.6026761221326788,52505,True,positive,True
+PF,N_PFlossR_2ktw,accessibility_loss,N_PFlossR_2kmw,accessibility_loss,0.8710491690429611,0.8710491690429611,3709,True,positive,True
+PF,PFAB2k_NOR,centrality_influence,PFAB5k_NOR,centrality_influence,0.7697055929272179,0.7697055929272179,4037,True,positive,True
+PF,PFResident_lossR,population_loss,PFPRM_lossR,population_loss,0.709139915968324,0.709139915968324,2181,True,positive,True
+PF,PFDaynight_lossR,population_loss,PFPRM_lossR,population_loss,0.6613942089052545,0.6613942089052545,2257,True,positive,True

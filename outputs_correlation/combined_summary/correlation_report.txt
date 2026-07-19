@@ -13,70 +13,29 @@ Theoretical groups:
   - population_loss: PFResident_lossR, PFDaynight_lossR, PFPRM_lossR
   - centrality_influence: PFAB2k_NOR, PFAB5k_NOR, PFABC_NOR
 Missing observations by feature:
-  - N_PFlossR_2kiw: 72098 missing (61.64%)
-  - N_PFlossR_2ktw: 4522 missing (3.87%)
-  - N_PFlossR_2kmw: 22635 missing (19.35%)
-  - PFResident_lossR: 56095 missing (47.96%)
-  - PFDaynight_lossR: 58905 missing (50.36%)
-  - PFPRM_lossR: 64181 missing (54.87%)
-  - PFAB2k_NOR: 9013 missing (7.71%)
-  - PFAB5k_NOR: 9012 missing (7.71%)
-  - PFABC_NOR: 205 missing (0.18%)
+  - N_PFlossR_2kiw: 1342 missing (32.73%)
+  - N_PFlossR_2ktw: 18 missing (0.44%)
+  - N_PFlossR_2kmw: 391 missing (9.54%)
+  - PFResident_lossR: 1633 missing (39.83%)
+  - PFDaynight_lossR: 1369 missing (33.39%)
+  - PFPRM_lossR: 1841 missing (44.90%)
+  - PFAB2k_NOR: 63 missing (1.54%)
+  - PFAB5k_NOR: 63 missing (1.54%)
+  - PFABC_NOR: 175 missing (4.27%)
 Data-quality issues:
   None detected by the configured checks.
 High-correlation pairs: 7
-Within-group high-correlation pairs: 7
-  - N_PFlossR_2ktw (accessibility_loss) <-> N_PFlossR_2kmw (accessibility_loss): r=0.8337, |r|=0.8337, pairwise_n=94037
-  - PFAB2k_NOR (centrality_influence) <-> PFAB5k_NOR (centrality_influence): r=0.7926, |r|=0.7926, pairwise_n=107946
-  - PFResident_lossR (population_loss) <-> PFPRM_lossR (population_loss): r=0.7473, |r|=0.7473, pairwise_n=51012
-  - PFDaynight_lossR (population_loss) <-> PFPRM_lossR (population_loss): r=0.6922, |r|=0.6922, pairwise_n=51564
-  - N_PFlossR_2kiw (accessibility_loss) <-> N_PFlossR_2kmw (accessibility_loss): r=0.6827, |r|=0.6827, pairwise_n=44524
-  - N_PFlossR_2kiw (accessibility_loss) <-> N_PFlossR_2ktw (accessibility_loss): r=0.6647, |r|=0.6647, pairwise_n=44861
-  - PFResident_lossR (population_loss) <-> PFDaynight_lossR (population_loss): r=0.6027, |r|=0.6027, pairwise_n=52505
-Cross-group high-correlation pairs: 0
-  None
+Within-group high-correlation pairs: 4
+  - N_PFlossR_2ktw (accessibility_loss) <-> N_PFlossR_2kmw (accessibility_loss): r=0.8710, |r|=0.8710, pairwise_n=3709
+  - PFAB2k_NOR (centrality_influence) <-> PFAB5k_NOR (centrality_influence): r=0.7697, |r|=0.7697, pairwise_n=4037
+  - PFResident_lossR (population_loss) <-> PFPRM_lossR (population_loss): r=0.7091, |r|=0.7091, pairwise_n=2181
+  - PFDaynight_lossR (population_loss) <-> PFPRM_lossR (population_loss): r=0.6614, |r|=0.6614, pairwise_n=2257
+Cross-group high-correlation pairs: 3
+  - Per_extent (flood_exposure) <-> N_PFlossR_2ktw (accessibility_loss): r=0.7278, |r|=0.7278, pairwise_n=4082
+  - Per_extent (flood_exposure) <-> N_PFlossR_2kmw (accessibility_loss): r=0.6775, |r|=0.6775, pairwise_n=3709
+  - Per_extent (flood_exposure) <-> N_PFlossR_2kiw (accessibility_loss): r=0.6190, |r|=0.6190, pairwise_n=2758
 Highest absolute correlation pair:
-  - N_PFlossR_2ktw (accessibility_loss) <-> N_PFlossR_2kmw (accessibility_loss): r=0.8337, |r|=0.8337, pairwise_n=94037
-
-TF
---
-Features analyzed: 10
-Theoretical groups:
-  - flood_exposure: Tem_extent
-  - accessibility_loss: N_TFlossR_2kiw, N_TFlossR_2ktw, N_TFlossR_2kmw
-  - population_loss: TFResident_lossR, TFDaynight_lossR, TFPRM_lossR
-  - centrality_influence: TFAB2k_NOR, TFAB5k_NOR, TFABC_NOR
-Missing observations by feature:
-  - N_TFlossR_2kiw: 72098 missing (61.64%)
-  - N_TFlossR_2ktw: 4522 missing (3.87%)
-  - N_TFlossR_2kmw: 22635 missing (19.35%)
-  - TFResident_lossR: 56095 missing (47.96%)
-  - TFDaynight_lossR: 58905 missing (50.36%)
-  - TFPRM_lossR: 64181 missing (54.87%)
-  - TFAB2k_NOR: 9013 missing (7.71%)
-  - TFAB5k_NOR: 9012 missing (7.71%)
-  - TFABC_NOR: 2722 missing (2.33%)
-Data-quality issues:
-  None detected by the configured checks.
-High-correlation pairs: 14
-Within-group high-correlation pairs: 7
-  - TFResident_lossR (population_loss) <-> TFPRM_lossR (population_loss): r=0.9328, |r|=0.9328, pairwise_n=51012
-  - N_TFlossR_2ktw (accessibility_loss) <-> N_TFlossR_2kmw (accessibility_loss): r=0.9053, |r|=0.9053, pairwise_n=94037
-  - TFResident_lossR (population_loss) <-> TFDaynight_lossR (population_loss): r=0.8848, |r|=0.8848, pairwise_n=52505
-  - TFDaynight_lossR (population_loss) <-> TFPRM_lossR (population_loss): r=0.8762, |r|=0.8762, pairwise_n=51564
-  - TFAB2k_NOR (centrality_influence) <-> TFAB5k_NOR (centrality_influence): r=0.8601, |r|=0.8601, pairwise_n=107946
-  - N_TFlossR_2kiw (accessibility_loss) <-> N_TFlossR_2kmw (accessibility_loss): r=0.8541, |r|=0.8541, pairwise_n=44524
-  - N_TFlossR_2kiw (accessibility_loss) <-> N_TFlossR_2ktw (accessibility_loss): r=0.8136, |r|=0.8136, pairwise_n=44861
-Cross-group high-correlation pairs: 7
-  - Tem_extent (flood_exposure) <-> TFDaynight_lossR (population_loss): r=-0.8413, |r|=0.8413, pairwise_n=58054
-  - Tem_extent (flood_exposure) <-> TFResident_lossR (population_loss): r=-0.8352, |r|=0.8352, pairwise_n=60864
-  - Tem_extent (flood_exposure) <-> TFPRM_lossR (population_loss): r=-0.8090, |r|=0.8090, pairwise_n=52778
-  - TFDaynight_lossR (population_loss) <-> TFAB2k_NOR (centrality_influence): r=-0.7452, |r|=0.7452, pairwise_n=54128
-  - TFResident_lossR (population_loss) <-> TFAB2k_NOR (centrality_influence): r=-0.7267, |r|=0.7267, pairwise_n=56287
-  - TFPRM_lossR (population_loss) <-> TFAB2k_NOR (centrality_influence): r=-0.7109, |r|=0.7109, pairwise_n=49068
-  - Tem_extent (flood_exposure) <-> N_TFlossR_2ktw (accessibility_loss): r=0.6403, |r|=0.6403, pairwise_n=112437
-Highest absolute correlation pair:
-  - TFResident_lossR (population_loss) <-> TFPRM_lossR (population_loss): r=0.9328, |r|=0.9328, pairwise_n=51012
+  - N_PFlossR_2ktw (accessibility_loss) <-> N_PFlossR_2kmw (accessibility_loss): r=0.8710, |r|=0.8710, pairwise_n=3709
 
 Researcher reminder
 -------------------

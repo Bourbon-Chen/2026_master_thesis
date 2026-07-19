@@ -1,8 +1,8 @@
 ﻿scenario,feature_1,group_1,feature_2,group_2,pearson_r,absolute_r,pairwise_n,same_group,correlation_direction,threshold_exceeded
-TF,Tem_extent,flood_exposure,TFDaynight_lossR,population_loss,-0.8412864346508465,0.8412864346508465,58054,False,negative,True
-TF,Tem_extent,flood_exposure,TFResident_lossR,population_loss,-0.8351626987786583,0.8351626987786583,60864,False,negative,True
-TF,Tem_extent,flood_exposure,TFPRM_lossR,population_loss,-0.8090252734113765,0.8090252734113765,52778,False,negative,True
-TF,TFDaynight_lossR,population_loss,TFAB2k_NOR,centrality_influence,-0.7451865045004803,0.7451865045004803,54128,False,negative,True
-TF,TFResident_lossR,population_loss,TFAB2k_NOR,centrality_influence,-0.7266715320728517,0.7266715320728517,56287,False,negative,True
-TF,TFPRM_lossR,population_loss,TFAB2k_NOR,centrality_influence,-0.7108975061904621,0.7108975061904621,49068,False,negative,True
-TF,Tem_extent,flood_exposure,N_TFlossR_2ktw,accessibility_loss,0.640264917067338,0.640264917067338,112437,False,positive,True
+TF,Tem_extent,flood_exposure,N_TFlossR_2ktw,accessibility_loss,0.7841753069041124,0.7841753069041124,4082,False,positive,True
+TF,Tem_extent,flood_exposure,TFDaynight_lossR,population_loss,-0.7765720106847239,0.7765720106847239,2731,False,negative,True
+TF,Tem_extent,flood_exposure,N_TFlossR_2kmw,accessibility_loss,0.7351931904012269,0.7351931904012269,3709,False,positive,True
+TF,Tem_extent,flood_exposure,TFResident_lossR,population_loss,-0.7131018258271498,0.7131018258271498,2467,False,negative,True
+TF,Tem_extent,flood_exposure,TFPRM_lossR,population_loss,-0.6884634126765053,0.6884634126765053,2259,False,negative,True
+TF,TFDaynight_lossR,population_loss,TFAB2k_NOR,centrality_influence,-0.6350601835374511,0.6350601835374511,2690,False,negative,True
+TF,Tem_extent,flood_exposure,N_TFlossR_2kiw,accessibility_loss,0.6240234494389025,0.6240234494389025,2758,False,positive,True

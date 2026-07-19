@@ -1,1 +1,4 @@
 ﻿scenario,feature_1,group_1,feature_2,group_2,pearson_r,absolute_r,pairwise_n,same_group,correlation_direction,threshold_exceeded
+PF,Per_extent,flood_exposure,N_PFlossR_2ktw,accessibility_loss,0.7278331059665535,0.7278331059665535,4082,False,positive,True
+PF,Per_extent,flood_exposure,N_PFlossR_2kmw,accessibility_loss,0.6775328157359923,0.6775328157359923,3709,False,positive,True
+PF,Per_extent,flood_exposure,N_PFlossR_2kiw,accessibility_loss,0.619045790686213,0.619045790686213,2758,False,positive,True
