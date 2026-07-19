@@ -1,0 +1,5 @@
+scenario,version,min_cluster_size,min_samples,noise_count,noise_ratio
+PF,version_a,2000,150,38760,0.33139818226900025
+PF,version_b,2000,150,41650,0.35610769585923274
+TF,version_a,2000,150,51762,0.4425653434109389
+TF,version_b,2000,150,48588,0.41542762848519565

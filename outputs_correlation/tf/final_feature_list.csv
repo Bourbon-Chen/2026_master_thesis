@@ -1,0 +1,6 @@
+feature,used_in_correlation
+Tem_extent,True
+TF_Index_population,True
+TF_Index_acc_loss,True
+TF_Index_centrality,True
+TF_Index_Risk_equal,False

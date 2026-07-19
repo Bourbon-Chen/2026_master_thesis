@@ -1,0 +1,2 @@
+flood_scenario,version_name,min_cluster_size,min_samples,metric,cluster_selection_method,number_of_clusters,noise_count,noise_percentage,largest_cluster_size
+PF,version_B_standardized,100,40,euclidean,eom,115,39908,34.12135876674732,16412

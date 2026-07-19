@@ -1,0 +1,3 @@
+variable_1,variable_2,correlation,abs_correlation,threshold,decision,removed_variable,kept_variable
+TF_Index_acc_loss,TF_Index_centrality,0.8005158692320292,0.8005158692320292,0.6,keep_both,,both
+Tem_extent,TF_Index_population,0.6430500797676837,0.6430500797676837,0.6,keep_both,,both

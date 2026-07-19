@@ -1,0 +1,3 @@
+﻿scenario,number_of_features,number_of_all_pairs,number_of_high_correlation_pairs,number_of_within_group_high_pairs,number_of_cross_group_high_pairs,maximum_absolute_correlation,feature_1_of_max_pair,feature_2_of_max_pair,pearson_r_of_max_pair
+PF,10,45,7,7,0,0.8336959848576061,N_PFlossR_2ktw,N_PFlossR_2kmw,0.8336959848576061
+TF,10,45,14,7,7,0.9328314794267136,TFResident_lossR,TFPRM_lossR,0.9328314794267136

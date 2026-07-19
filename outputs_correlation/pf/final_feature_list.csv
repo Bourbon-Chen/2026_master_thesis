@@ -1,0 +1,6 @@
+feature,used_in_correlation
+Per_extent,True
+PF_Index_population,True
+PF_Index_acc_loss,True
+PF_Index_centrality,True
+PF_Index_Risk_equal,False
