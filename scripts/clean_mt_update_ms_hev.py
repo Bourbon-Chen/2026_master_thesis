@@ -10,8 +10,8 @@ from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-DEFAULT_INPUT = SCRIPT_DIR / "../data/MT_UPDATE_MS_HEV.csv"
-DEFAULT_OUTPUT = SCRIPT_DIR / "../data/MT_UPDATE_MS_HEV_cleaned.csv"
+DEFAULT_INPUT = SCRIPT_DIR / "../data/MT_UPDATE_MS_HEV_v2.csv"
+DEFAULT_OUTPUT = SCRIPT_DIR / "../data/MT_UPDATE_MS_HEV_cleaned_v2.csv"
 BASE_COLUMNS = ("fid", "MS_ID", "Per_extent", "Tem_extent")
 
 
