@@ -2,7 +2,8 @@ import importlib.util
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from tempfile import TemporaryDirectory
+from unittest.mock import Mock, patch
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -66,6 +67,108 @@ class InteractiveInputTests(unittest.TestCase):
         self.assert_prompt_behavior(CORRELATION, CORRELATION.INPUT_FILE)
         self.assert_argument_behavior(CORRELATION)
 
+    def test_correlation_scenario_prompt_retries_and_normalizes(self):
+        self.assertTrue(
+            hasattr(CORRELATION, "prompt_scenario"),
+            "script must define prompt_scenario",
+        )
+        with patch("builtins.input", side_effect=["invalid", "tf"]) as mocked_input:
+            with patch("builtins.print") as mocked_print:
+                self.assertEqual(CORRELATION.prompt_scenario(), "TF")
+
+        self.assertEqual(mocked_input.call_count, 2)
+        mocked_input.assert_called_with("Enter correlation scenario (pf/tf): ")
+        mocked_print.assert_called_once_with("Scenario must be 'pf' or 'tf'.")
+
+    def test_correlation_scenario_prompt_accepts_pf_and_tf_case_insensitively(self):
+        for entered, expected in (("pf", "PF"), ("PF", "PF"), ("tf", "TF"), ("TF", "TF")):
+            with self.subTest(entered=entered):
+                with patch("builtins.input", return_value=entered):
+                    self.assertEqual(CORRELATION.prompt_scenario(), expected)
+
+    def test_correlation_main_runs_only_selected_scenario(self):
+        data = CORRELATION.pd.DataFrame()
+        result = {
+            "features": [],
+            "high_pairs": [],
+            "within_high_pairs": [],
+            "cross_high_pairs": [],
+        }
+        arguments = [
+            "correlation_analysis.py",
+            "--input",
+            "data/custom.csv",
+        ]
+
+        for scenario in ("PF", "TF"):
+            with self.subTest(scenario=scenario):
+                summary = Mock()
+                selected = {
+                    scenario: CORRELATION.SCENARIO_FEATURE_GROUPS[scenario]
+                }
+                with TemporaryDirectory() as temporary_directory:
+                    output_directory = Path(temporary_directory)
+                    with patch.object(sys, "argv", arguments):
+                        with patch.object(
+                            CORRELATION, "OUTPUT_DIRECTORY", output_directory
+                        ):
+                            with patch.object(
+                                CORRELATION,
+                                "prompt_scenario",
+                                return_value=scenario,
+                            ) as mocked_scenario_prompt:
+                                with patch.object(
+                                    CORRELATION, "load_data", return_value=data
+                                ) as mocked_load:
+                                    with patch.object(
+                                        CORRELATION, "validate_columns"
+                                    ) as mocked_validate:
+                                        with patch.object(
+                                            CORRELATION,
+                                            "analyze_scenario",
+                                            return_value=result,
+                                        ) as mocked_analyze:
+                                            with patch.object(
+                                                CORRELATION,
+                                                "create_combined_summary",
+                                                return_value=summary,
+                                            ) as mocked_summary:
+                                                with patch.object(
+                                                    CORRELATION, "write_text_report"
+                                                ) as mocked_report:
+                                                    with patch("builtins.print"):
+                                                        CORRELATION.main()
+
+                    mocked_scenario_prompt.assert_called_once_with()
+                    mocked_load.assert_called_once_with(
+                        Path("data/custom.csv").resolve()
+                    )
+                    mocked_validate.assert_called_once_with(data, selected)
+                    mocked_analyze.assert_called_once_with(
+                        data,
+                        scenario,
+                        CORRELATION.SCENARIO_FEATURE_GROUPS[scenario],
+                        output_directory / scenario,
+                        CORRELATION.CORRELATION_THRESHOLD,
+                        CORRELATION.EXPECTED_RANGES,
+                    )
+                    mocked_summary.assert_called_once_with({scenario: result})
+                    summary.to_csv.assert_called_once_with(
+                        output_directory
+                        / "combined_summary"
+                        / "correlation_summary.csv",
+                        index=False,
+                        encoding="utf-8-sig",
+                    )
+                    mocked_report.assert_called_once_with(
+                        {scenario: result},
+                        selected,
+                        output_directory
+                        / "combined_summary"
+                        / "correlation_report.txt",
+                        CORRELATION.CORRELATION_THRESHOLD,
+                    )
+
     def test_filter_omitted_input_uses_prompt_result(self):
         custom = Path("data/custom.csv")
         arguments = [
@@ -92,16 +195,17 @@ class InteractiveInputTests(unittest.TestCase):
             with patch.object(
                 CORRELATION, "prompt_input_path", return_value=custom
             ) as mocked_prompt:
-                with patch.object(
-                    CORRELATION,
-                    "load_data",
-                    side_effect=stop_after_load,
-                ) as mocked_load:
-                    with patch("builtins.print"):
-                        with self.assertRaisesRegex(
-                            RuntimeError, "stop after input selection"
-                        ):
-                            CORRELATION.main()
+                with patch.object(CORRELATION, "prompt_scenario", return_value="PF"):
+                    with patch.object(
+                        CORRELATION,
+                        "load_data",
+                        side_effect=stop_after_load,
+                    ) as mocked_load:
+                        with patch("builtins.print"):
+                            with self.assertRaisesRegex(
+                                RuntimeError, "stop after input selection"
+                            ):
+                                CORRELATION.main()
 
         mocked_prompt.assert_called_once_with()
         mocked_load.assert_called_once_with(custom.resolve())
@@ -138,16 +242,17 @@ class InteractiveInputTests(unittest.TestCase):
                 "prompt_input_path",
                 side_effect=AssertionError("input prompt must be bypassed"),
             ):
-                with patch.object(
-                    CORRELATION,
-                    "load_data",
-                    side_effect=stop_after_load,
-                ) as mocked_load:
-                    with patch("builtins.print"):
-                        with self.assertRaisesRegex(
-                            RuntimeError, "stop after input selection"
-                        ):
-                            CORRELATION.main()
+                with patch.object(CORRELATION, "prompt_scenario", return_value="PF"):
+                    with patch.object(
+                        CORRELATION,
+                        "load_data",
+                        side_effect=stop_after_load,
+                    ) as mocked_load:
+                        with patch("builtins.print"):
+                            with self.assertRaisesRegex(
+                                RuntimeError, "stop after input selection"
+                            ):
+                                CORRELATION.main()
 
         mocked_load.assert_called_once_with(custom.resolve())
 

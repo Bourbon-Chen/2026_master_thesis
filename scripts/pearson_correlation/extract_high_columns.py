@@ -40,6 +40,12 @@ SCENARIO_CONFIG: Dict[str, Dict[str, object]] = {
 }
 
 
+def prompt_input_path(default_path: Path = DEFAULT_INPUT) -> Path:
+    """Prompt for an input CSV path, using the configured path when blank."""
+    entered_path = input(f"Enter input CSV path [{default_path}]: ").strip()
+    return Path(entered_path) if entered_path else default_path
+
+
 def _scenario_config(scenario: str) -> Dict[str, object]:
     normalized = scenario.strip().lower()
     if normalized not in SCENARIO_CONFIG:
@@ -228,8 +234,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-i",
         "--input",
-        default=str(DEFAULT_INPUT),
-        help=f"Input CSV (default: {DEFAULT_INPUT}).",
+        type=Path,
+        default=None,
+        help=(
+            "Input CSV path "
+            f"(prompted when omitted; blank uses: {DEFAULT_INPUT})"
+        ),
     )
     parser.add_argument(
         "-s",
@@ -260,7 +270,10 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    input_path = resolve_input_path(args.input)
+    raw_input_path = (
+        args.input if args.input is not None else prompt_input_path()
+    )
+    input_path = resolve_input_path(raw_input_path)
     scenario = args.scenario or prompt_scenario()
     available_columns = pd.read_csv(input_path, nrows=0).columns
 

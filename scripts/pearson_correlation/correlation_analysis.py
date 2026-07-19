@@ -89,6 +89,16 @@ SCENARIO_FEATURE_GROUPS: Dict[str, Mapping[str, Sequence[str]]] = {
     "TF": TF_FEATURE_GROUPS,
 }
 
+
+def prompt_scenario() -> str:
+    """Prompt until the user selects the PF or TF correlation scenario."""
+    while True:
+        scenario = input("Enter correlation scenario (pf/tf): ").strip().upper()
+        if scenario in SCENARIO_FEATURE_GROUPS:
+            return scenario
+        print("Scenario must be 'pf' or 'tf'.")
+
+
 EXPECTED_RANGES: Dict[str, Tuple[float, float]] = {
     "flood_exposure": (0.0, 1.0),
     "accessibility_loss": (-1.0, 1.0),
@@ -860,38 +870,39 @@ def analyze_scenario(
 
 
 def main() -> None:
-    """Run PF and TF Pearson correlation analyses and save all outputs."""
+    """Run the selected PF or TF Pearson correlation analysis."""
     args = parse_args()
     input_file = (
         args.input if args.input is not None else prompt_input_path()
     ).resolve()
+    scenario = prompt_scenario()
     print("Loading dataset...")
     data = load_data(input_file)
     print(f"Dataset shape: {len(data)} rows × {len(data.columns)} columns")
-    validate_columns(data, SCENARIO_FEATURE_GROUPS)
+    feature_groups = SCENARIO_FEATURE_GROUPS[scenario]
+    selected_feature_groups = {scenario: feature_groups}
+    validate_columns(data, selected_feature_groups)
 
-    scenario_results: Dict[str, Mapping[str, Any]] = {}
-    for scenario, feature_groups in SCENARIO_FEATURE_GROUPS.items():
-        print(f"\nRunning {scenario} correlation analysis...")
-        print(f"{scenario} features: {len(_flatten_features(feature_groups))}")
-        result = analyze_scenario(
-            data,
-            scenario,
-            feature_groups,
-            OUTPUT_DIRECTORY / scenario,
-            CORRELATION_THRESHOLD,
-            EXPECTED_RANGES,
-        )
-        scenario_results[scenario] = result
-        print(f"{scenario} high-correlation pairs: {len(result['high_pairs'])}")
-        print(
-            f"{scenario} within-group high-correlation pairs: "
-            f"{len(result['within_high_pairs'])}"
-        )
-        print(
-            f"{scenario} cross-group high-correlation pairs: "
-            f"{len(result['cross_high_pairs'])}"
-        )
+    print(f"\nRunning {scenario} correlation analysis...")
+    print(f"{scenario} features: {len(_flatten_features(feature_groups))}")
+    result = analyze_scenario(
+        data,
+        scenario,
+        feature_groups,
+        OUTPUT_DIRECTORY / scenario,
+        CORRELATION_THRESHOLD,
+        EXPECTED_RANGES,
+    )
+    scenario_results = {scenario: result}
+    print(f"{scenario} high-correlation pairs: {len(result['high_pairs'])}")
+    print(
+        f"{scenario} within-group high-correlation pairs: "
+        f"{len(result['within_high_pairs'])}"
+    )
+    print(
+        f"{scenario} cross-group high-correlation pairs: "
+        f"{len(result['cross_high_pairs'])}"
+    )
 
     combined_output_directory = OUTPUT_DIRECTORY / "combined_summary"
     combined_output_directory.mkdir(parents=True, exist_ok=True)
@@ -903,7 +914,7 @@ def main() -> None:
     )
     write_text_report(
         scenario_results,
-        SCENARIO_FEATURE_GROUPS,
+        selected_feature_groups,
         combined_output_directory / "correlation_report.txt",
         CORRELATION_THRESHOLD,
     )

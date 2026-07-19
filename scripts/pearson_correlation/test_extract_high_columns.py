@@ -156,6 +156,101 @@ class ExtractHighColumnsScriptTests(unittest.TestCase):
         ):
             self.assertEqual(ehc.parse_args().scenario, "pf")
 
+    def test_input_prompt_uses_default_or_typed_path(self) -> None:
+        self.assertTrue(
+            hasattr(ehc, "prompt_input_path"),
+            "script must define prompt_input_path",
+        )
+        with patch("builtins.input", return_value="") as mocked_input:
+            self.assertEqual(ehc.prompt_input_path(), ehc.DEFAULT_INPUT)
+        mocked_input.assert_called_once_with(
+            f"Enter input CSV path [{ehc.DEFAULT_INPUT}]: "
+        )
+
+        with patch("builtins.input", return_value="  custom.csv  "):
+            self.assertEqual(ehc.prompt_input_path(), Path("custom.csv"))
+
+    def test_input_argument_is_optional_and_accepts_path(self) -> None:
+        with patch.object(sys, "argv", ["extract_high_columns.py"]):
+            self.assertIsNone(ehc.parse_args().input)
+        with patch.object(
+            sys,
+            "argv",
+            ["extract_high_columns.py", "--input", "custom.csv"],
+        ):
+            self.assertEqual(ehc.parse_args().input, Path("custom.csv"))
+
+    def test_main_prompts_when_input_is_omitted(self) -> None:
+        prompted_path = Path("prompted.csv")
+        resolved_path = Path("resolved.csv").resolve()
+        arguments = [
+            "extract_high_columns.py",
+            "--scenario",
+            "pf",
+            "--remove",
+            "PFAB5k_NOR",
+        ]
+        with patch.object(sys, "argv", arguments):
+            with patch.object(
+                ehc,
+                "prompt_input_path",
+                return_value=prompted_path,
+                create=True,
+            ) as mocked_prompt:
+                with patch.object(
+                    ehc, "resolve_input_path", return_value=resolved_path
+                ) as mocked_resolve:
+                    with patch.object(
+                        ehc.pd, "read_csv", return_value=self.data.iloc[:0]
+                    ):
+                        with patch.object(ehc, "extract_dataset") as mocked_extract:
+                            ehc.main()
+
+        mocked_prompt.assert_called_once_with()
+        mocked_resolve.assert_called_once_with(prompted_path)
+        mocked_extract.assert_called_once_with(
+            resolved_path,
+            "pf",
+            ["PFAB5k_NOR"],
+            ehc.DEFAULT_OUTPUT_ROOT,
+        )
+
+    def test_main_explicit_input_bypasses_prompt(self) -> None:
+        cli_path = Path("cli.csv")
+        resolved_path = Path("resolved.csv").resolve()
+        arguments = [
+            "extract_high_columns.py",
+            "--input",
+            str(cli_path),
+            "--scenario",
+            "pf",
+            "--remove",
+            "PFAB5k_NOR",
+        ]
+        with patch.object(sys, "argv", arguments):
+            with patch.object(
+                ehc,
+                "prompt_input_path",
+                side_effect=AssertionError("input prompt must be bypassed"),
+                create=True,
+            ):
+                with patch.object(
+                    ehc, "resolve_input_path", return_value=resolved_path
+                ) as mocked_resolve:
+                    with patch.object(
+                        ehc.pd, "read_csv", return_value=self.data.iloc[:0]
+                    ):
+                        with patch.object(ehc, "extract_dataset") as mocked_extract:
+                            ehc.main()
+
+        mocked_resolve.assert_called_once_with(cli_path)
+        mocked_extract.assert_called_once_with(
+            resolved_path,
+            "pf",
+            ["PFAB5k_NOR"],
+            ehc.DEFAULT_OUTPUT_ROOT,
+        )
+
     def test_extract_dataset_writes_scenario_specific_for_pca_name(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
