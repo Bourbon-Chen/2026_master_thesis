@@ -1,6 +1,9 @@
+from argparse import Namespace
 from pathlib import Path
+import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -120,6 +123,81 @@ class ChooseKTests(unittest.TestCase):
 
     def test_default_silhouette_sample_size_is_configured(self) -> None:
         self.assertEqual(choose_k.SILHOUETTE_SAMPLE_SIZE, 10000)
+
+    def test_parse_args_accepts_case_insensitive_scenario(self) -> None:
+        for entered, expected in (
+            ("PF", "PF"),
+            ("pf", "PF"),
+            ("TF", "TF"),
+            ("tf", "TF"),
+        ):
+            with self.subTest(entered=entered):
+                with patch.object(
+                    sys, "argv", ["choose_k.py", "--scenario", entered]
+                ):
+                    self.assertEqual(choose_k.parse_args().scenario, expected)
+
+    def test_parse_args_leaves_omitted_scenario_unset(self) -> None:
+        with patch.object(sys, "argv", ["choose_k.py"]):
+            self.assertIsNone(choose_k.parse_args().scenario)
+
+    def test_prompt_scenario_retries_and_normalizes(self) -> None:
+        with patch("builtins.input", side_effect=["invalid", " tf "]), patch(
+            "builtins.print"
+        ) as mocked_print:
+            self.assertEqual(choose_k.prompt_scenario(), "TF")
+
+        mocked_print.assert_called_once_with("Please enter PF or TF.")
+
+    def test_main_prompts_when_scenario_is_omitted(self) -> None:
+        args = Namespace(
+            scenario=None,
+            input=None,
+            output_root=Path("output"),
+            k_min=2,
+            k_max=3,
+            silhouette_sample_size=10000,
+        )
+        with patch.object(choose_k, "parse_args", return_value=args), patch.object(
+            choose_k, "prompt_scenario", return_value="TF"
+        ) as mocked_prompt, patch.object(
+            choose_k, "run_analysis"
+        ) as mocked_run:
+            choose_k.main()
+
+        mocked_prompt.assert_called_once_with()
+        mocked_run.assert_called_once_with(
+            choose_k.DEFAULT_INPUT_PATHS["TF"],
+            "TF",
+            args.output_root,
+            range(2, 4),
+            10000,
+        )
+
+    def test_main_does_not_prompt_when_scenario_is_supplied(self) -> None:
+        args = Namespace(
+            scenario="PF",
+            input=None,
+            output_root=Path("output"),
+            k_min=2,
+            k_max=3,
+            silhouette_sample_size=10000,
+        )
+        with patch.object(choose_k, "parse_args", return_value=args), patch.object(
+            choose_k, "prompt_scenario"
+        ) as mocked_prompt, patch.object(
+            choose_k, "run_analysis"
+        ) as mocked_run:
+            choose_k.main()
+
+        mocked_prompt.assert_not_called()
+        mocked_run.assert_called_once_with(
+            choose_k.DEFAULT_INPUT_PATHS["PF"],
+            "PF",
+            args.output_root,
+            range(2, 4),
+            10000,
+        )
 
     def test_plots_results_and_recommendation_are_saved(self) -> None:
         values = choose_k.standardize_features(

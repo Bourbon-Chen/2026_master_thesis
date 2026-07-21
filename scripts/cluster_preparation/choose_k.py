@@ -26,8 +26,6 @@ os.environ.setdefault("OMP_NUM_THREADS", "1")
 # ---------------------------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-INPUT_FILE = PROJECT_ROOT / "outputs_correlation" / "pf" / "pf_for_PCA.csv"
-SCENARIO = "PF"
 DEFAULT_INPUT_PATHS: Dict[str, Path] = {
     "PF": PROJECT_ROOT / "outputs_correlation" / "pf" / "pf_for_PCA.csv",
     "TF": PROJECT_ROOT / "outputs_correlation" / "tf" / "tf_for_PCA.csv",
@@ -93,6 +91,15 @@ def normalize_scenario(value: str) -> str:
     if scenario not in SCENARIO_CONFIG:
         raise ValueError("Scenario must be PF or TF.")
     return scenario
+
+
+def prompt_scenario() -> str:
+    while True:
+        value = input("Select scenario (PF/TF): ")
+        try:
+            return normalize_scenario(value)
+        except ValueError:
+            print("Please enter PF or TF.")
 
 
 def _scenario_features(scenario: str) -> Sequence[str]:
@@ -411,9 +418,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-s",
         "--scenario",
+        type=normalize_scenario,
         choices=sorted(SCENARIO_CONFIG),
-        default=SCENARIO,
-        help=f"Scenario to analyze: PF or TF (default: {SCENARIO}).",
+        default=None,
+        help="Scenario to analyze: PF or TF. Prompted when omitted.",
     )
     parser.add_argument(
         "-i",
@@ -455,7 +463,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    scenario = normalize_scenario(args.scenario)
+    scenario = args.scenario if args.scenario is not None else prompt_scenario()
     if args.k_max < args.k_min:
         raise SystemExit("ERROR: --k-max must be greater than or equal to --k-min.")
     input_file = args.input if args.input is not None else DEFAULT_INPUT_PATHS[scenario]
