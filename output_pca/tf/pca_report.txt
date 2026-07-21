@@ -1,0 +1,26 @@
+PCA Report - TF
+===============
+Total observations: 13584
+Variables: 7
+
+First 5 component explained variance ratios:
+  - PC1: 0.5461
+  - PC2: 0.1368
+  - PC3: 0.1107
+  - PC4: 0.1033
+  - PC5: 0.0549
+
+First two PCs cumulative variance: 0.6829
+Largest absolute loading on PC1: Tem_extent
+Largest absolute loading on PC2: TFABC_NOR
+
+Fill-zero counts by PCA variable:
+  - Tem_extent: 0
+  - N_TFlossR_2kiw: 4256
+  - N_TFlossR_2kmw: 357
+  - TFResident_lossR: 5595
+  - TFDaynight_lossR: 4919
+  - TFAB5k_NOR: 439
+  - TFABC_NOR: 2686
+
+The first two principal components only capture part of the data variance.

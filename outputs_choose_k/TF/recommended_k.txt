@@ -1,0 +1,12 @@
+K-means K Recommendation
+========================
+Silhouette sample size: 10000
+
+Metric-specific best K:
+  - Elbow: K=6
+  - Silhouette: K=2
+  - Calinski-Harabasz: K=2
+  - Davies-Bouldin: K=2
+
+Recommended K: 2
+3 out of four evaluation metrics suggest K=2.
