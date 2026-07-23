@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Sequence
+from typing import Sequence
 
 import matplotlib
 
@@ -22,37 +23,19 @@ from pandas.api.types import is_numeric_dtype
 # ---------------------------------------------------------------------------
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_INPUT_PATHS: Dict[str, Path] = {
-    "PF": PROJECT_ROOT / "outputs_correlation" / "pf" / "pf_for_PCA.csv",
-    "TF": PROJECT_ROOT / "outputs_correlation" / "tf" / "tf_for_PCA.csv",
-}
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from scripts.utils.scenario_features import (
+    DEFAULT_INPUT_PATHS,
+    PF_FEATURES,
+    PF_METADATA_COLUMNS,
+    SCENARIO_CONFIG,
+    TF_FEATURES,
+    TF_METADATA_COLUMNS,
+)
+
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output_pca"
-
-PF_FEATURES = (
-    "Per_extent",
-    "N_PFlossR_2kiw",
-    "N_PFlossR_2kmw",
-    "PFResident_lossR",
-    "PFDaynight_lossR",
-    "PFAB5k_NOR",
-    "PFABC_NOR",
-)
-TF_FEATURES = (
-    "Tem_extent",
-    "N_TFlossR_2kiw",
-    "N_TFlossR_2kmw",
-    "TFResident_lossR",
-    "TFDaynight_lossR",
-    "TFAB5k_NOR",
-    "TFABC_NOR",
-)
-PF_METADATA_COLUMNS = ("fid", "MS_ID", "PF_Index_Risk_equal")
-TF_METADATA_COLUMNS = ("fid", "MS_ID", "TF_Index_Risk_equal")
-
-SCENARIO_CONFIG: Dict[str, Dict[str, Sequence[str]]] = {
-    "PF": {"features": PF_FEATURES, "metadata": PF_METADATA_COLUMNS},
-    "TF": {"features": TF_FEATURES, "metadata": TF_METADATA_COLUMNS},
-}
 
 @dataclass
 class PreparedDataset:

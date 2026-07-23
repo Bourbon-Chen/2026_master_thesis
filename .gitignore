@@ -13,3 +13,5 @@ env/
 Thumbs.db
 
 .vscode/
+
+.superpowers/
