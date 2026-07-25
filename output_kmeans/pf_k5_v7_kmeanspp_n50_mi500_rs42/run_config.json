@@ -1,0 +1,195 @@
+{
+  "scenario": "PF",
+  "input_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_correlation\\pf\\pf_for_PCA.csv",
+  "output_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\output_kmeans\\pf_k5_v7_kmeanspp_n50_mi500_rs42",
+  "k": 5,
+  "feature_list": [
+    "Per_extent",
+    "N_PFlossR_2kiw",
+    "N_PFlossR_2kmw",
+    "PFResident_lossR",
+    "PFDaynight_lossR",
+    "PFAB5k_NOR",
+    "PFABC_NOR"
+  ],
+  "excluded_columns": [
+    {
+      "column": "fid",
+      "reason": "identifier field"
+    },
+    {
+      "column": "MS_ID",
+      "reason": "identifier field"
+    },
+    {
+      "column": "Street_type_NOR",
+      "reason": "excluded keyword: type"
+    },
+    {
+      "column": "Resident_NOR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "DayNight_NOR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "PRM_NOR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "Index_population",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "PF_Index_acc_loss",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "PF_Index_population",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "PFAB2k_lossR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "N_PFAB2k_lossR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "PFAB5k_lossR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "N_PFAB5k_lossR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "PF_Index_centrality",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "PF_Index_V_equal",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "PF_Index_Risk_equal",
+      "reason": "excluded keyword: index"
+    }
+  ],
+  "id_columns": [
+    "fid",
+    "MS_ID"
+  ],
+  "data_quality_issues": [
+    {
+      "issue_type": "missing_values",
+      "column": "N_PFlossR_2kiw",
+      "count": 1342,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "missing_values",
+      "column": "N_PFlossR_2kmw",
+      "count": 391,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "missing_values",
+      "column": "PFResident_lossR",
+      "count": 1633,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "missing_values",
+      "column": "PFDaynight_lossR",
+      "count": 1369,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "missing_values",
+      "column": "PFAB5k_NOR",
+      "count": 63,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "missing_values",
+      "column": "PFABC_NOR",
+      "count": 175,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "invalid_rows",
+      "column": "",
+      "count": 1956,
+      "action": "excluded from K-means",
+      "details": "Rows remain in clustered_data.csv with an empty label."
+    }
+  ],
+  "standard_scaler_applied": false,
+  "scaling_transformations_applied": [],
+  "kmeans_parameters": {
+    "init": "k-means++",
+    "n_init": 50,
+    "max_iter": 500,
+    "random_state": 42,
+    "algorithm": "lloyd",
+    "tol": 0.0001
+  },
+  "metric_parameters": {
+    "silhouette_sample_size": null,
+    "silhouette_working_memory_mb": 256
+  },
+  "sample_counts": {
+    "original": 4100,
+    "valid": 2144,
+    "removed": 1956
+  },
+  "missing_counts": {
+    "N_PFlossR_2kiw": 1342,
+    "N_PFlossR_2kmw": 391,
+    "PFResident_lossR": 1633,
+    "PFDaynight_lossR": 1369,
+    "PFAB5k_NOR": 63,
+    "PFABC_NOR": 175
+  },
+  "missing_value_policy": "Complete-case row removal for active clustering features; no imputation was applied.",
+  "cluster_label_ordering": "centroid PC1 projection",
+  "pca_explained_variance_percent": {
+    "pc1": 42.96043960219352,
+    "pc2": 25.590874796061502,
+    "pc1_plus_pc2": 68.55131439825502
+  },
+  "model_fit": {
+    "inertia": 241.8632454222543,
+    "n_iter": 6,
+    "converged": true,
+    "fit_seconds": 6.547130000006291
+  },
+  "runtime": {
+    "runtime_seconds": 9.215972199999669,
+    "runtime_scope": "start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication"
+  },
+  "versions": {
+    "python": "3.11.14",
+    "pandas": "2.3.3",
+    "numpy": "2.3.3",
+    "scikit_learn": "1.7.2"
+  },
+  "timestamps": {
+    "started_at": "2026-07-24T01:39:37+02:00",
+    "ended_at": "2026-07-24T01:39:46+02:00",
+    "ended_at_scope": "start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication",
+    "execution_timestamp": "2026-07-24T01:39:46+02:00"
+  },
+  "warnings": [
+    "\nFound Intel OpenMP ('libiomp') and LLVM OpenMP ('libomp') loaded at\nthe same time. Both libraries are known to be incompatible and this\ncan cause random crashes or deadlocks on Linux when loaded in the\nsame Python program.\nUsing threadpoolctl may cause crashes or deadlocks. For more\ninformation and possible workarounds, please see\n    https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md\n"
+  ]
+}

@@ -1,0 +1,8 @@
+issue_type,column,count,action,details
+missing_values,N_TFlossR_2kiw,4256,removed affected rows,No imputation was applied.
+missing_values,N_TFlossR_2kmw,357,removed affected rows,No imputation was applied.
+missing_values,TFResident_lossR,5595,removed affected rows,No imputation was applied.
+missing_values,TFDaynight_lossR,4919,removed affected rows,No imputation was applied.
+missing_values,TFAB5k_NOR,439,removed affected rows,No imputation was applied.
+missing_values,TFABC_NOR,2686,removed affected rows,No imputation was applied.
+invalid_rows,,8742,excluded from K-means,Rows remain in clustered_data.csv with an empty label.

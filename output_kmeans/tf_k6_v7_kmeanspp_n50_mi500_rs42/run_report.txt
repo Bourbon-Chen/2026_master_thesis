@@ -1,0 +1,128 @@
+K-means experiment report
+=========================
+Scenario: TF
+Input CSV: F:\CTH-MPDSD\Year 2-period 2\ACEX35\Codes\rf_demo\outputs_correlation\tf\tf_for_PCA.csv
+Output directory: F:\CTH-MPDSD\Year 2-period 2\ACEX35\Codes\rf_demo\output_kmeans\tf_k6_v7_kmeanspp_n50_mi500_rs42
+K: 6
+Features (7): Tem_extent, N_TFlossR_2kiw, N_TFlossR_2kmw, TFResident_lossR, TFDaynight_lossR, TFAB5k_NOR, TFABC_NOR
+
+Sample counts
+- Original: 13584
+- Valid: 4842
+- Removed: 8742
+
+Excluded columns
+- fid: identifier field
+- MS_ID: identifier field
+- Street_type_NOR: excluded keyword: type
+- Resident_NOR: not in scenario feature configuration
+- DayNight_NOR: not in scenario feature configuration
+- PRM_NOR: not in scenario feature configuration
+- Index_population: excluded keyword: index
+- TF_Index_acc_loss: excluded keyword: index
+- TF_Index_population: excluded keyword: index
+- TFAB2k_lossR: not in scenario feature configuration
+- N_TFAB2k_lossR: not in scenario feature configuration
+- TFAB5k_lossR: not in scenario feature configuration
+- N_TFAB5k_lossR: not in scenario feature configuration
+- TF_Index_centrality: excluded keyword: index
+- TF_Index_V_equal: excluded keyword: index
+- TF_Index_Risk_equal: excluded keyword: index
+
+Missing-data treatment
+- Policy: Complete-case row removal for active clustering features; no imputation was applied.
+- N_TFlossR_2kiw: 4256 missing value(s)
+- N_TFlossR_2kmw: 357 missing value(s)
+- TFResident_lossR: 5595 missing value(s)
+- TFDaynight_lossR: 4919 missing value(s)
+- TFAB5k_NOR: 439 missing value(s)
+- TFABC_NOR: 2686 missing value(s)
+
+Data-quality issues
+- missing_values | N_TFlossR_2kiw | count=4256 | removed affected rows: No imputation was applied.
+- missing_values | N_TFlossR_2kmw | count=357 | removed affected rows: No imputation was applied.
+- missing_values | TFResident_lossR | count=5595 | removed affected rows: No imputation was applied.
+- missing_values | TFDaynight_lossR | count=4919 | removed affected rows: No imputation was applied.
+- missing_values | TFAB5k_NOR | count=439 | removed affected rows: No imputation was applied.
+- missing_values | TFABC_NOR | count=2686 | removed affected rows: No imputation was applied.
+- invalid_rows | (all rows) | count=8742 | excluded from K-means: Rows remain in clustered_data.csv with an empty label.
+
+Scaling
+The input data had already been standardized with StandardScaler.
+This script did not apply StandardScaler or any other scaling transformation.
+
+K-means settings
+- init: k-means++
+- n_init: 50
+- max_iter: 500
+- random_state: 42
+- algorithm: lloyd
+- tolerance: 0.0001
+- iterations: 21
+- converged: True
+- fit seconds: 6.16653
+
+Cluster label ordering
+- Rule: centroid PC1 projection
+
+Cluster membership
+- Cluster 1: 325 samples (6.71%)
+- Cluster 2: 387 samples (7.99%)
+- Cluster 3: 1126 samples (23.25%)
+- Cluster 4: 1096 samples (22.64%)
+- Cluster 5: 385 samples (7.95%)
+- Cluster 6: 1523 samples (31.45%)
+
+Model metrics
+- inertia: 725.835
+- silhouette_score: 0.369316
+- calinski_harabasz_score: 2293.29
+- davies_bouldin_score: 1.18561
+
+PCA explained variance
+- PC1: 42.2638%
+- PC2: 26.8825%
+- PC1 + PC2: 69.1463%
+
+Persisted staging-complete runtime: 9.877 seconds
+Runtime scope: start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication
+End-to-end runtime, including the final metadata rewrite and atomic publication, is printed in the terminal.
+
+Timestamps
+- Started: 2026-07-24T01:48:53+02:00
+- Artifact snapshot: 2026-07-24T01:49:02+02:00
+- Snapshot scope: start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication
+- Execution timestamp: 2026-07-24T01:49:02+02:00
+
+Software versions
+- Python: 3.11.14
+- pandas: 2.3.3
+- NumPy: 2.3.3
+- scikit-learn: 1.7.2
+
+Warnings
+- 
+Found Intel OpenMP ('libiomp') and LLVM OpenMP ('libomp') loaded at
+the same time. Both libraries are known to be incompatible and this
+can cause random crashes or deadlocks on Linux when loaded in the
+same Python program.
+Using threadpoolctl may cause crashes or deadlocks. For more
+information and possible workarounds, please see
+    https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md
+
+
+Output files
+- clustered_data.csv
+- cluster_summary.csv
+- cluster_centroids_standardized.csv
+- cluster_feature_profile.csv
+- sample_distances.csv
+- model_metrics.csv
+- cluster_label_mapping.csv
+- data_quality_issues.csv
+- run_config.json
+- run_report.txt
+- pca_cluster_scatter.png
+- cluster_size_bar.png
+- cluster_centroid_heatmap.png
+- cluster_feature_profiles.png
