@@ -16,9 +16,7 @@ PF_FEATURES = (
     "PFABC_NOR",
 ) # 2. 已经删掉"Per_extent"和"Tem_extent"列，再尝试
 TF_FEATURES = (
-    "N_TFlossR_2kiw",
-    "N_TFlossR_2kmw",
-    "TFResident_lossR",
+    "N_TFlossR_2kiw", # 3. 删除”N_TFlossR_2kmw” # 4. 删除“TFResident_lossR”
     "TFDaynight_lossR",
     "TFAB5k_NOR",
     "TFABC_NOR",
