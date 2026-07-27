@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import contextlib
+import argparse
 import inspect
 import json
 import os
@@ -22,7 +23,6 @@ from typing import Sequence
 
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_numeric_dtype
 
 import matplotlib
 
@@ -33,11 +33,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.utils.scenario_features import (
-    DEFAULT_INPUT_PATHS,
-    PF_FEATURES,
-    SCENARIO_CONFIG,
-    TF_FEATURES,
+from scripts.utils.clustering_preprocessing import (
+    PreparedArtifact,
+    inverse_transform_frame,
+    load_prepared_artifact,
+    sha256_file,
 )
 
 OUTPUT_ROOT = PROJECT_ROOT / "output_kmeans"
@@ -60,11 +60,12 @@ TABULAR_TEXT_OUTPUTS = (
     "clustered_data.csv",
     "cluster_summary.csv",
     "cluster_centroids_standardized.csv",
+    "cluster_centroids_original_scale.csv",
     "cluster_feature_profile.csv",
     "sample_distances.csv",
     "model_metrics.csv",
     "cluster_label_mapping.csv",
-    "data_quality_issues.csv",
+    "preprocessing_audit.csv",
     "run_config.json",
     "run_report.txt",
 )
@@ -75,29 +76,6 @@ PLOT_OUTPUTS = (
     "cluster_feature_profiles.png",
 )
 ALL_OUTPUTS = TABULAR_TEXT_OUTPUTS + PLOT_OUTPUTS
-
-EXCLUSION_KEYWORDS = (
-    "index",
-    "risk",
-    "cluster",
-    "label",
-    "type",
-    "typology",
-    "intervention",
-    "score",
-    "geometry",
-)
-EXACT_ID_NAMES = {
-    "id",
-    "fid",
-    "gid",
-    "objectid",
-    "ogc_fid",
-    "ms_id",
-    "street_id",
-    "segment_id",
-}
-
 
 class KMeansAnalysisError(RuntimeError):
     """Base exception for expected user-facing workflow errors."""
@@ -116,38 +94,12 @@ class OutputDirectoryExistsError(KMeansAnalysisError):
 
 
 @dataclass(frozen=True)
-class ColumnExclusion:
-    column: str
-    reason: str
-
-
-@dataclass(frozen=True)
-class DataQualityIssue:
-    issue_type: str
-    column: str
-    count: int
-    action: str
-    details: str
-
-
-@dataclass
-class FeatureSelection:
-    feature_names: tuple[str, ...]
-    exclusions: list[ColumnExclusion]
-    id_columns: tuple[str, ...]
-    issues: list[DataQualityIssue]
-
-
-@dataclass
 class ValidatedData:
-    original_data: pd.DataFrame
-    features: pd.DataFrame
-    valid_mask: pd.Series
+    artifact: PreparedArtifact
+    values: np.ndarray
     feature_names: tuple[str, ...]
-    exclusions: list[ColumnExclusion]
-    id_columns: tuple[str, ...]
-    missing_counts: dict[str, int]
-    issues: list[DataQualityIssue]
+    metadata: pd.DataFrame
+    row_count: int
 
 
 @dataclass
@@ -160,6 +112,7 @@ class FittedKMeans:
     converged: bool
     fit_seconds: float
     warnings: list[str]
+    standardized_centroids: pd.DataFrame | None = None
 
 
 @dataclass
@@ -177,11 +130,13 @@ class ClusterOrdering:
 class AnalysisTables:
     clustered_data: pd.DataFrame
     cluster_summary: pd.DataFrame
-    centroids: pd.DataFrame
-    feature_profile: pd.DataFrame
+    cluster_centroids_standardized: pd.DataFrame
+    cluster_centroids_original_scale: pd.DataFrame
+    cluster_feature_profile: pd.DataFrame
     sample_distances: pd.DataFrame
     label_mapping: pd.DataFrame
     data_quality_issues: pd.DataFrame
+    preprocessing_audit_path: Path
 
 
 @dataclass
@@ -336,25 +291,6 @@ def staged_output_directory(final_path: Path):
                 ) from error
 
 
-def normalize_scenario(value: str) -> str:
-    normalized = value.strip().lower()
-    aliases = {"1": "PF", "pf": "PF", "2": "TF", "tf": "TF"}
-    if normalized not in aliases:
-        raise ValueError("Invalid selection. Enter 1/pf or 2/tf.")
-    return aliases[normalized]
-
-
-def prompt_scenario() -> str:
-    while True:
-        print("Select flood scenario:")
-        print("1. PF")
-        print("2. TF")
-        try:
-            return normalize_scenario(input().strip())
-        except ValueError as error:
-            print(str(error))
-
-
 def prompt_k(n_samples: int | None = None) -> int:
     while True:
         value = input("Enter the number of clusters K: ").strip()
@@ -378,201 +314,15 @@ def _strip_matching_quotes(value: str) -> str:
     return stripped
 
 
-def _resolve_readable_csv_path(candidate: Path) -> Path:
-    """Resolve a candidate and verify it can be opened before returning it."""
-    resolved = Path(candidate).expanduser().resolve()
-    if not resolved.exists():
-        raise FileNotFoundError(os.fspath(resolved))
-    if not resolved.is_file():
-        raise IsADirectoryError(os.fspath(resolved))
-    with resolved.open("rb") as stream:
-        stream.read(1)
-    return resolved
-
-
-def prompt_csv_path(scenario: str) -> Path:
-    default_path = DEFAULT_INPUT_PATHS[scenario]
-    default_name = default_path.name
+def prompt_prepared_path() -> Path:
+    """Prompt for the immutable prepared-artifact directory."""
     while True:
-        entered = input(f"Enter CSV path [default: {default_name}]: ")
-        candidate = default_path if not entered.strip() else Path(
-            _strip_matching_quotes(entered)
-        )
-        try:
-            resolved = _resolve_readable_csv_path(candidate)
-        except FileNotFoundError:
-            print(f"CSV file not found: {candidate}")
-            continue
-        except IsADirectoryError:
-            print(f"CSV path is not a file: {candidate}")
-            continue
-        except PermissionError as error:
-            print(f"CSV file is not readable: {candidate}: {error}")
-            continue
-        except (OSError, RuntimeError) as error:
-            print(f"Could not access CSV path {candidate}: {error}")
-            continue
-        return resolved
-
-
-def load_dataset(path: Path) -> pd.DataFrame:
-    try:
-        return pd.read_csv(path, low_memory=False)
-    except FileNotFoundError as error:
-        raise KMeansAnalysisError(f"CSV file not found: {path}") from error
-    except PermissionError as error:
-        raise KMeansAnalysisError(f"Permission denied while reading: {path}") from error
-    except pd.errors.EmptyDataError as error:
-        raise KMeansAnalysisError(f"CSV is empty: {path}") from error
-    except pd.errors.ParserError as error:
-        raise KMeansAnalysisError(f"CSV could not be parsed: {path}: {error}") from error
-    except UnicodeDecodeError as error:
-        raise KMeansAnalysisError(f"CSV is not valid UTF-8 text: {path}") from error
-
-
-def is_id_column(name: str) -> bool:
-    normalized = name.strip().lower()
-    return (
-        normalized in EXACT_ID_NAMES
-        or normalized.endswith("_id")
-        or normalized.startswith("id_")
-    )
-
-
-def _retained_exclusion_reason(column: str, series: pd.Series) -> str:
-    if is_id_column(column):
-        return "identifier field"
-    if not is_numeric_dtype(series):
-        return "non-numeric retained field"
-    lowered = column.lower()
-    for keyword in EXCLUSION_KEYWORDS:
-        if keyword in lowered:
-            return f"excluded keyword: {keyword}"
-    return "not in scenario feature configuration"
-
-
-def select_features(data: pd.DataFrame, scenario: str) -> FeatureSelection:
-    if "kmeans_cluster" in data.columns:
-        raise DataValidationError(
-            "Reserved output column already exists: kmeans_cluster"
-        )
-    configured = tuple(SCENARIO_CONFIG[scenario]["features"])
-    for column in configured:
-        if column not in data.columns:
-            raise DataValidationError(f"Missing configured feature: {column}")
-        if not is_numeric_dtype(data[column]):
-            raise DataValidationError(
-                f"Configured feature is not numeric: {column}"
-            )
-
-    exclusions = [
-        ColumnExclusion(column, _retained_exclusion_reason(column, data[column]))
-        for column in data.columns
-        if column not in configured
-    ]
-    id_columns = tuple(column for column in data.columns if is_id_column(column))
-    return FeatureSelection(configured, exclusions, id_columns, [])
-
-
-def validate_features(
-    data: pd.DataFrame, selection: FeatureSelection
-) -> ValidatedData:
-    active = list(selection.feature_names)
-    exclusions = list(selection.exclusions)
-    issues = list(selection.issues)
-
-    for column in list(active):
-        series = data[column].astype(float)
-        finite_nonmissing = series.dropna()
-        if series.isna().all():
-            reason = "all values are missing"
-            issue_count = int(series.isna().sum())
-        elif np.isinf(series.to_numpy(dtype=float)).any():
-            reason = "contains infinity"
-            issue_count = int(np.isinf(series.to_numpy(dtype=float)).sum())
-        elif finite_nonmissing.nunique() <= 1:
-            reason = "constant feature"
-            issue_count = int(finite_nonmissing.size)
-        else:
-            continue
-        active.remove(column)
-        exclusions.append(ColumnExclusion(column, reason))
-        issues.append(
-            DataQualityIssue(reason, column, issue_count, "excluded feature", reason)
-        )
-
-    while active:
-        frame = data.loc[:, active].astype(float)
-        valid_mask = frame.notna().all(axis=1)
-        valid_frame = frame.loc[valid_mask]
-        post_drop_constants = [
-            column for column in active if valid_frame[column].nunique() <= 1
-        ]
-        if not post_drop_constants:
-            break
-        for column in post_drop_constants:
-            active.remove(column)
-            exclusions.append(
-                ColumnExclusion(column, "constant after missing-row removal")
-            )
-            issues.append(
-                DataQualityIssue(
-                    "constant_after_row_removal",
-                    column,
-                    int(len(valid_frame)),
-                    "excluded feature",
-                    "Only one valid value remained after complete-case filtering.",
-                )
-            )
-
-    if not active:
-        raise DataValidationError("No usable clustering features remain.")
-
-    frame = data.loc[:, active].astype(float)
-    missing_counts = {
-        column: int(count)
-        for column, count in frame.isna().sum().items()
-        if int(count) > 0
-    }
-    valid_mask = frame.notna().all(axis=1)
-    valid_frame = frame.loc[valid_mask].copy()
-    if not np.isfinite(valid_frame.to_numpy(dtype=float)).all():
-        raise DataValidationError("Non-finite values remain after feature validation.")
-    removed_count = int((~valid_mask).sum())
-    for column, count in missing_counts.items():
-        issues.append(
-            DataQualityIssue(
-                "missing_values",
-                column,
-                count,
-                "removed affected rows",
-                "No imputation was applied.",
-            )
-        )
-    if removed_count:
-        issues.append(
-            DataQualityIssue(
-                "invalid_rows",
-                "",
-                removed_count,
-                "excluded from K-means",
-                "Rows remain in clustered_data.csv with an empty label.",
-            )
-        )
-    if len(valid_frame) < 3:
-        raise DataValidationError(
-            "At least 3 valid samples are required because 2 <= K < n_samples."
-        )
-    return ValidatedData(
-        original_data=data.copy(),
-        features=valid_frame,
-        valid_mask=valid_mask,
-        feature_names=tuple(active),
-        exclusions=exclusions,
-        id_columns=selection.id_columns,
-        missing_counts=missing_counts,
-        issues=issues,
-    )
+        candidate = Path(_strip_matching_quotes(
+            input("Prepared artifact directory: ")
+        ))
+        if candidate.is_dir():
+            return candidate.resolve()
+        print(f"Prepared artifact directory not found: {candidate}")
 
 
 def run_kmeans(values: np.ndarray, k: int) -> FittedKMeans:
@@ -710,11 +460,13 @@ def reorder_cluster_labels(
         }
     )
     reordered_centroids = pd.DataFrame(
-        centroids[original_order], columns=list(feature_names)
+        centroids[original_order],
+        columns=list(feature_names),
+        index=pd.Index(
+            np.arange(1, len(original_order) + 1), name="cluster"
+        ),
     )
-    reordered_centroids.insert(
-        0, "cluster_id", np.arange(1, len(original_order) + 1)
-    )
+    fitted.standardized_centroids = reordered_centroids.copy()
     return ClusterOrdering(
         reordered_labels=reordered_labels,
         mapping=mapping,
@@ -731,12 +483,45 @@ def calculate_cluster_profiles(
     fitted: FittedKMeans,
     ordering: ClusterOrdering,
 ) -> AnalysisTables:
-    valid_positions = np.flatnonzero(validated.valid_mask.to_numpy())
-    full_labels = pd.array([pd.NA] * len(validated.original_data), dtype="Int64")
-    full_labels[valid_positions] = ordering.reordered_labels
-    clustered = validated.original_data.copy()
-    clustered["kmeans_cluster"] = full_labels
+    if (
+        len(ordering.reordered_labels) != validated.row_count
+        or len(fitted.assigned_distances) != validated.row_count
+    ):
+        raise DataValidationError(
+            "K-means output length does not match the prepared metadata."
+        )
+    assignments = pd.DataFrame(
+        {
+            "source_row_position": validated.metadata[
+                "source_row_position"
+            ].to_numpy(copy=True),
+            "kmeans_cluster": ordering.reordered_labels,
+            "distance_to_assigned_centroid": fitted.assigned_distances,
+        }
+    )
+    if assignments["source_row_position"].duplicated().any():
+        raise DataValidationError("K-means assignments are not one-to-one by row.")
+    reporting_rows = pd.concat(
+        [
+            validated.metadata.reset_index(drop=True),
+            validated.artifact.original_features.reset_index(drop=True),
+        ],
+        axis=1,
+    )
+    clustered = reporting_rows.merge(
+        assignments,
+        on="source_row_position",
+        how="left",
+        validate="one_to_one",
+        sort=False,
+    )
+    if len(clustered) != validated.row_count or clustered["kmeans_cluster"].isna().any():
+        raise DataValidationError("Every prepared row must receive a cluster label.")
 
+    standardized_centroids = ordering.reordered_centroids.copy()
+    original_centroids = inverse_transform_frame(
+        standardized_centroids, validated.artifact.scaler_parameters
+    )
     summaries = []
     profiles = []
     for cluster_id in range(1, len(ordering.mapping) + 1):
@@ -762,50 +547,68 @@ def calculate_cluster_profiles(
                 else np.nan,
             }
         )
-        members = validated.features.iloc[np.flatnonzero(member_mask)]
-        for feature in validated.feature_names:
-            values = members[feature]
+        for feature_position, feature in enumerate(validated.feature_names):
+            original_values = validated.artifact.original_features.loc[
+                member_mask, feature
+            ]
+            filled_values = validated.artifact.filled_features.loc[
+                member_mask, feature
+            ]
+            original_non_null = original_values.dropna()
             profiles.append(
                 {
-                    "cluster_id": cluster_id,
+                    "cluster": cluster_id,
                     "feature": feature,
-                    "mean": float(values.mean()) if count else np.nan,
-                    "median": float(values.median()) if count else np.nan,
-                    "std": float(values.std(ddof=0)) if count else np.nan,
-                    "min": float(values.min()) if count else np.nan,
-                    "max": float(values.max()) if count else np.nan,
-                    "q25": float(values.quantile(0.25)) if count else np.nan,
-                    "q75": float(values.quantile(0.75)) if count else np.nan,
+                    "original_non_null_count": int(original_non_null.count()),
+                    "original_structural_null_count": int(original_values.isna().sum()),
+                    "original_structural_null_percent": (
+                        float(original_values.isna().mean() * 100.0)
+                        if count
+                        else np.nan
+                    ),
+                    "original_non_null_mean": (
+                        float(original_non_null.mean())
+                        if not original_non_null.empty
+                        else np.nan
+                    ),
+                    "original_non_null_median": (
+                        float(original_non_null.median())
+                        if not original_non_null.empty
+                        else np.nan
+                    ),
+                    "filled_mean": float(filled_values.mean()) if count else np.nan,
+                    "standardized_centroid": float(
+                        standardized_centroids.loc[cluster_id, feature]
+                    ),
+                    "inverse_transformed_centroid": float(
+                        original_centroids.loc[cluster_id, feature]
+                    ),
                 }
             )
 
-    source_valid = validated.original_data.iloc[valid_positions]
-    distance_table = source_valid.loc[:, list(validated.id_columns)].reset_index(
-        drop=True
-    )
-    distance_table["kmeans_cluster"] = ordering.reordered_labels
-    distance_table["distance_to_assigned_centroid"] = fitted.assigned_distances
-    issues = pd.DataFrame(
+    distance_table = clustered.loc[
+        :,
         [
-            {
-                "issue_type": issue.issue_type,
-                "column": issue.column,
-                "count": issue.count,
-                "action": issue.action,
-                "details": issue.details,
-            }
-            for issue in validated.issues
+            *validated.metadata.columns,
+            "kmeans_cluster",
+            "distance_to_assigned_centroid",
         ],
-        columns=["issue_type", "column", "count", "action", "details"],
+    ].copy()
+    issues = pd.DataFrame(
+        columns=["issue_type", "column", "count", "action", "details"]
     )
     return AnalysisTables(
         clustered_data=clustered,
         cluster_summary=pd.DataFrame(summaries),
-        centroids=ordering.reordered_centroids.copy(),
-        feature_profile=pd.DataFrame(profiles),
+        cluster_centroids_standardized=standardized_centroids,
+        cluster_centroids_original_scale=original_centroids,
+        cluster_feature_profile=pd.DataFrame(profiles),
         sample_distances=distance_table,
         label_mapping=ordering.mapping.copy(),
         data_quality_issues=issues,
+        preprocessing_audit_path=(
+            validated.artifact.directory / "preprocessing_audit.csv"
+        ),
     )
 
 
@@ -871,29 +674,44 @@ def build_run_config(
             "pc1_plus_pc2": float(percentages[0] + percentages[1]),
         }
 
-    original_count = int(len(validated.original_data))
-    valid_count = int(len(validated.features))
+    manifest_path = (
+        validated.artifact.directory / "preprocessing_config.json"
+    ).resolve()
+    null_counts = validated.artifact.original_features.isna().sum()
+    missing_counts = {
+        str(name): int(count) for name, count in null_counts.items() if count
+    }
+    structural_null_row_count = int(
+        validated.metadata["had_structural_null"].sum()
+    )
+    structural_null_value_count = int(
+        validated.metadata["structural_null_count"].sum()
+    )
     return {
         "scenario": str(scenario),
         "input_path": str(Path(input_path).resolve()),
         "output_path": str(Path(output_path).resolve()),
         "k": int(k),
         "feature_list": [str(name) for name in validated.feature_names],
-        "excluded_columns": [
-            {"column": str(item.column), "reason": str(item.reason)}
-            for item in validated.exclusions
-        ],
-        "id_columns": [str(name) for name in validated.id_columns],
-        "data_quality_issues": [
-            {
-                "issue_type": str(item.issue_type),
-                "column": str(item.column),
-                "count": int(item.count),
-                "action": str(item.action),
-                "details": str(item.details),
-            }
-            for item in validated.issues
-        ],
+        "preprocessing_reference": {
+            "manifest_path": str(manifest_path),
+            "manifest_sha256": sha256_file(manifest_path),
+            "matrix_sha256": validated.artifact.config["matrix_sha256"],
+            "source_path": validated.artifact.config["source_path"],
+            "source_sha256": validated.artifact.config["source_sha256"],
+            "scenario": validated.artifact.config["scenario"],
+            "row_count": validated.row_count,
+            "feature_names": list(validated.feature_names),
+            "feature_count": len(validated.feature_names),
+            "structural_null_row_count": structural_null_row_count,
+            "structural_null_value_count": structural_null_value_count,
+            "rows_excluded_for_null": 0,
+        },
+        "excluded_columns": validated.artifact.excluded_features.loc[
+            :, ["column", "reason"]
+        ].to_dict(orient="records"),
+        "id_columns": [str(name) for name in validated.metadata.columns],
+        "data_quality_issues": [],
         "standard_scaler_applied": False,
         "scaling_transformations_applied": [],
         "kmeans_parameters": {
@@ -911,18 +729,12 @@ def build_run_config(
             ),
         },
         "sample_counts": {
-            "original": original_count,
-            "valid": valid_count,
-            "removed": original_count - valid_count,
+            "original": validated.row_count,
+            "valid": validated.row_count,
+            "removed": 0,
         },
-        "missing_counts": {
-            str(name): int(count)
-            for name, count in validated.missing_counts.items()
-        },
-        "missing_value_policy": (
-            "Complete-case row removal for active clustering features; "
-            "no imputation was applied."
-        ),
+        "missing_counts": missing_counts,
+        "missing_value_policy": "Prepared structural nulls retained.",
         "cluster_label_ordering": str(ordering.ordering_method),
         "pca_explained_variance_percent": explained_variance,
         "model_fit": {
@@ -981,7 +793,7 @@ def build_run_report(
         "K-means experiment report",
         "=========================",
         f"Scenario: {config['scenario']}",
-        f"Input CSV: {config['input_path']}",
+        f"Prepared artifact: {config['input_path']}",
         f"Output directory: {config['output_path']}",
         f"K: {config['k']}",
         f"Features ({len(config['feature_list'])}): "
@@ -1139,14 +951,24 @@ def export_data_tables(
     frame_outputs = (
         ("clustered_data.csv", tables.clustered_data),
         ("cluster_summary.csv", tables.cluster_summary),
-        ("cluster_centroids_standardized.csv", tables.centroids),
-        ("cluster_feature_profile.csv", tables.feature_profile),
+        (
+            "cluster_centroids_standardized.csv",
+            tables.cluster_centroids_standardized.reset_index(),
+        ),
+        (
+            "cluster_centroids_original_scale.csv",
+            tables.cluster_centroids_original_scale.reset_index(),
+        ),
+        ("cluster_feature_profile.csv", tables.cluster_feature_profile),
         ("sample_distances.csv", tables.sample_distances),
         ("cluster_label_mapping.csv", tables.label_mapping),
-        ("data_quality_issues.csv", tables.data_quality_issues),
     )
     for filename, frame in frame_outputs:
         _write_csv(frame, output_directory / filename)
+    shutil.copyfile(
+        tables.preprocessing_audit_path,
+        output_directory / "preprocessing_audit.csv",
+    )
 
 
 def export_run_metadata(
@@ -1322,7 +1144,7 @@ def generate_centroid_heatmap(
     """Write an annotated, zero-centered heatmap of standardized centroids."""
     values = centroids.loc[:, list(feature_names)].to_numpy(dtype=float)
     limit = max(float(np.nanmax(np.abs(values))), 1e-12)
-    row_labels = [f"Cluster {cluster_id}" for cluster_id in centroids["cluster_id"]]
+    row_labels = [f"Cluster {cluster_id}" for cluster_id in centroids.index]
     maximum_label_length = max(
         [len(label) for label in feature_names] + [len(label) for label in row_labels]
     )
@@ -1362,15 +1184,18 @@ def generate_profile_plot(
 ) -> None:
     """Write cluster mean feature profiles in configured feature order."""
     ordered_features = list(feature_names)
-    cluster_ids = sorted(feature_profile["cluster_id"].unique())
+    cluster_ids = sorted(feature_profile["cluster"].unique())
     figure, axis = plt.subplots(figsize=(max(8, len(ordered_features) * 1.15), 6))
     colors = plt.get_cmap("tab10", len(cluster_ids))
     positions = np.arange(len(ordered_features))
     for color_index, cluster_id in enumerate(cluster_ids):
         profile = feature_profile.loc[
-            feature_profile["cluster_id"] == cluster_id, ["feature", "mean"]
+            feature_profile["cluster"] == cluster_id,
+            ["feature", "inverse_transformed_centroid"],
         ].set_index("feature")
-        means = profile.reindex(ordered_features)["mean"].to_numpy(dtype=float)
+        means = profile.reindex(ordered_features)[
+            "inverse_transformed_centroid"
+        ].to_numpy(dtype=float)
         axis.plot(
             positions,
             means,
@@ -1378,10 +1203,9 @@ def generate_profile_plot(
             color=colors(color_index),
             label=f"Cluster {cluster_id}",
         )
-    axis.axhline(0.0, color="black", linewidth=1, linestyle="--")
     axis.set_xticks(positions, ordered_features, rotation=45, ha="right")
-    axis.set_ylabel("Mean feature value")
-    axis.set_title("Cluster feature profiles")
+    axis.set_ylabel("Inverse-transformed centroid (original scale)")
+    axis.set_title("Cluster feature profiles (original scale)")
     axis.legend(title="Reordered cluster")
     axis.grid(alpha=0.25)
     figure.tight_layout()
@@ -1389,47 +1213,53 @@ def generate_profile_plot(
     plt.close(figure)
 
 
-def prepare_data(scenario: str, input_path: Path) -> ValidatedData:
-    print("[1/7] Reading input data...")
-    data = load_dataset(input_path)
-    print("[2/7] Selecting clustering features...")
-    selection = select_features(data, scenario)
-    print("[3/7] Validating data...")
-    return validate_features(data, selection)
+def prepare_data(prepared_path: Path) -> ValidatedData:
+    """Load the single verified matrix boundary used by all clustering tools."""
+    print("[1/7] Loading verified prepared artifact...")
+    try:
+        artifact = load_prepared_artifact(prepared_path)
+    except (OSError, ValueError) as error:
+        raise DataValidationError(f"Prepared artifact is invalid: {error}") from error
+    values = artifact.standardized_features.to_numpy(dtype=float, copy=True)
+    if not np.isfinite(values).all():
+        raise DataValidationError("Prepared standardized matrix is not finite.")
+    return ValidatedData(
+        artifact=artifact,
+        values=values,
+        feature_names=artifact.feature_names,
+        metadata=artifact.metadata.copy(),
+        row_count=len(artifact.metadata),
+    )
 
 
 def print_preflight_summary(
     scenario: str,
-    input_path: Path,
+    prepared_path: Path,
     k: int,
     validated: ValidatedData,
 ) -> None:
-    original_count = len(validated.original_data)
-    valid_count = len(validated.features)
+    artifact = validated.artifact
+    manifest_path = (artifact.directory / "preprocessing_config.json").resolve()
     print("K-means analysis preflight:")
     print(f"Scenario: {scenario}")
-    print(f"Input CSV: {Path(input_path).resolve()}")
+    print(f"Prepared artifact: {Path(prepared_path).resolve()}")
+    print(f"Source path: {artifact.config['source_path']}")
+    print(f"Source SHA-256: {artifact.config['source_sha256']}")
+    print(f"Manifest path: {manifest_path}")
+    print(f"Manifest SHA-256: {sha256_file(manifest_path)}")
+    print(f"Standardized matrix SHA-256: {artifact.config['matrix_sha256']}")
     print(f"K: {k}")
     print(
         f"Features ({len(validated.feature_names)}): "
         f"{', '.join(validated.feature_names)}"
     )
-    print(f"Original samples: {original_count}")
-    print(f"Valid samples: {valid_count}")
-    print(f"Rows excluded from K-means: {original_count - valid_count}")
-    print("Excluded columns:")
-    if validated.exclusions:
-        for exclusion in validated.exclusions:
-            print(f"- {exclusion.column}: {exclusion.reason}")
-    else:
-        print("- None")
-    print("Missing values in active features:")
-    if validated.missing_counts:
-        for column, count in validated.missing_counts.items():
-            print(f"- {column}: {count}")
-    else:
-        print("- None")
-    print("No StandardScaler, normalization, or other scaling will be applied.")
+    print(f"Prepared rows: {validated.row_count}")
+    print(
+        "Rows with structural null: "
+        f"{int(artifact.metadata['had_structural_null'].sum())}"
+    )
+    print("Rows excluded for null = 0")
+    print("No scaling will be applied; the verified standardized matrix is used exactly.")
 
 
 def print_completion_summary(
@@ -1453,7 +1283,7 @@ def print_completion_summary(
         f"Features ({len(validated.feature_names)}): "
         f"{', '.join(validated.feature_names)}"
     )
-    print(f"Valid samples: {len(validated.features)}")
+    print(f"Prepared samples: {validated.row_count}")
     print(f"Output folder: {output_path}")
     print("Cluster sizes:")
     for row in cluster_summary.itertuples(index=False):
@@ -1470,23 +1300,23 @@ def print_completion_summary(
 def _run_validated_analysis(
     scenario: str,
     k: int,
-    input_path: Path,
+    prepared_path: Path,
     output_root: Path,
     validated: ValidatedData,
     started_at_dt: datetime,
     started_perf: float,
 ) -> Path:
-    if k < 2 or k >= len(validated.features):
+    if not 2 <= k < validated.row_count:
         raise DataValidationError(
-            f"K must satisfy 2 <= K < {len(validated.features)} valid samples."
+            f"K must satisfy 2 <= K < {validated.row_count}; received {k}."
         )
     final_path = build_output_directory(
         output_root, scenario, k, len(validated.feature_names)
     )
-    print_preflight_summary(scenario, input_path, k, validated)
+    print_preflight_summary(scenario, prepared_path, k, validated)
 
     print("[4/7] Running K-means...")
-    values = validated.features.to_numpy(dtype=float, copy=True)
+    values = validated.values
     fitted = run_kmeans(values, k)
     ordering = reorder_cluster_labels(
         fitted, values, validated.feature_names
@@ -1514,12 +1344,12 @@ def _run_validated_analysis(
             tables.cluster_summary, staging / "cluster_size_bar.png"
         )
         generate_centroid_heatmap(
-            tables.centroids,
+            tables.cluster_centroids_standardized,
             validated.feature_names,
             staging / "cluster_centroid_heatmap.png",
         )
         generate_profile_plot(
-            tables.feature_profile,
+            tables.cluster_feature_profile,
             validated.feature_names,
             staging / "cluster_feature_profiles.png",
         )
@@ -1530,7 +1360,7 @@ def _run_validated_analysis(
         provisional_runtime_seconds = time.perf_counter() - started_perf
         provisional_config = build_run_config(
             scenario=scenario,
-            input_path=input_path.resolve(),
+            input_path=prepared_path.resolve(),
             output_path=final_path.resolve(),
             k=k,
             validated=validated,
@@ -1560,7 +1390,7 @@ def _run_validated_analysis(
         )
         final_config = build_run_config(
             scenario=scenario,
-            input_path=input_path.resolve(),
+            input_path=prepared_path.resolve(),
             output_path=final_path.resolve(),
             k=k,
             validated=validated,
@@ -1598,18 +1428,17 @@ def _run_validated_analysis(
 
 
 def run_analysis(
-    scenario: str,
+    prepared_path: Path,
     k: int,
-    input_path: Path,
     output_root: Path = OUTPUT_ROOT,
 ) -> Path:
     started_at_dt = datetime.now().astimezone()
     started_perf = time.perf_counter()
-    validated = prepare_data(scenario, input_path)
+    validated = prepare_data(prepared_path)
     return _run_validated_analysis(
-        scenario,
+        str(validated.artifact.config["scenario"]),
         k,
-        input_path,
+        prepared_path,
         output_root,
         validated,
         started_at_dt,
@@ -1618,28 +1447,25 @@ def run_analysis(
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Run K-means on a verified prepared clustering artifact."
+    )
+    parser.add_argument("--prepared", type=Path, default=None)
+    parser.add_argument("--k", type=int, default=None)
+    parser.add_argument("--output-root", type=Path, default=OUTPUT_ROOT)
+    args = parser.parse_args()
     try:
-        scenario = prompt_scenario()
-        k = prompt_k()
-        input_path = prompt_csv_path(scenario)
-        started_at_dt = datetime.now().astimezone()
-        started_perf = time.perf_counter()
-        validated = prepare_data(scenario, input_path)
-        if k >= len(validated.features):
-            print(
-                f"K must be smaller than the valid sample count "
-                f"({len(validated.features)})."
-            )
-            k = prompt_k(n_samples=len(validated.features))
-
+        prepared_path = args.prepared if args.prepared is not None else prompt_prepared_path()
+        validated = prepare_data(prepared_path)
+        k = args.k if args.k is not None else prompt_k(validated.row_count)
         _run_validated_analysis(
-            scenario,
+            str(validated.artifact.config["scenario"]),
             k,
-            input_path,
-            OUTPUT_ROOT,
+            prepared_path,
+            args.output_root,
             validated,
-            started_at_dt,
-            started_perf,
+            datetime.now().astimezone(),
+            time.perf_counter(),
         )
     except (
         KMeansAnalysisError,

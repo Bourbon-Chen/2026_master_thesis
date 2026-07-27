@@ -4,12 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 from collections import Counter
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional, Sequence
+from typing import Iterable, Optional
 
 import matplotlib
 
@@ -17,7 +17,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_numeric_dtype
 
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
@@ -30,13 +29,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.utils.scenario_features import (
-    DEFAULT_INPUT_PATHS,
-    PF_FEATURES,
-    PF_METADATA_COLUMNS,
-    SCENARIO_CONFIG,
-    TF_FEATURES,
-    TF_METADATA_COLUMNS,
+from scripts.utils.clustering_preprocessing import (
+    PreparedArtifact,
+    load_prepared_artifact,
+    sha256_file,
 )
 
 OUTPUT_ROOT = PROJECT_ROOT / "outputs_choose_k"
@@ -59,95 +55,6 @@ K_EVALUATION_COLUMNS = [
     "Smallest_Cluster",
     "Cluster_Size_SD",
 ]
-
-
-@dataclass
-class PreparedDataset:
-    scenario: str
-    metadata: pd.DataFrame
-    features: pd.DataFrame
-    fill_counts: pd.Series
-
-
-def normalize_scenario(value: str) -> str:
-    scenario = value.strip().upper()
-    if scenario not in SCENARIO_CONFIG:
-        raise ValueError("Scenario must be PF or TF.")
-    return scenario
-
-
-def prompt_scenario() -> str:
-    while True:
-        value = input("Select scenario (PF/TF): ")
-        try:
-            return normalize_scenario(value)
-        except ValueError:
-            print("Please enter PF or TF.")
-
-
-def _scenario_features(scenario: str) -> Sequence[str]:
-    return SCENARIO_CONFIG[scenario]["features"]
-
-
-def _scenario_metadata(scenario: str) -> Sequence[str]:
-    return SCENARIO_CONFIG[scenario]["metadata"]
-
-
-def load_data(input_file: Path, scenario: str) -> PreparedDataset:
-    """Load one scenario and keep only metadata plus configured features."""
-    scenario = normalize_scenario(scenario)
-    input_file = Path(input_file)
-    if not input_file.is_file():
-        raise FileNotFoundError(f"Input CSV not found: {input_file}")
-
-    data = pd.read_csv(input_file, low_memory=False)
-    feature_columns = list(_scenario_features(scenario))
-    metadata_columns = list(_scenario_metadata(scenario))
-    required_columns = metadata_columns + feature_columns
-    missing_columns = [
-        column for column in required_columns if column not in data.columns
-    ]
-    if missing_columns:
-        raise ValueError(
-            "Missing required columns for "
-            f"{scenario}: {', '.join(missing_columns)}"
-        )
-
-    for column in feature_columns:
-        if not is_numeric_dtype(data[column]):
-            raise ValueError(f"Clustering feature must be numeric: {column}")
-        values = data[column].to_numpy(dtype=float)
-        if np.isinf(values).any():
-            raise ValueError(f"Clustering feature contains infinity: {column}")
-
-    features = data.loc[:, feature_columns].copy()
-    fill_counts = features.isna().sum().astype(int)
-    features = features.fillna(0)
-    if features.isna().any().any():
-        raise ValueError("Missing feature values remain after fill-zero imputation.")
-    if len(features) < 3:
-        raise ValueError("K evaluation requires at least three observations.")
-
-    return PreparedDataset(
-        scenario=scenario,
-        metadata=data.loc[:, metadata_columns].copy(),
-        features=features,
-        fill_counts=fill_counts,
-    )
-
-
-def standardize_features(features: pd.DataFrame) -> np.ndarray:
-    """Standardize clustering variables with StandardScaler."""
-    try:
-        from sklearn.preprocessing import StandardScaler
-    except ImportError as error:
-        raise ImportError(
-            "scikit-learn is required for K evaluation. "
-            "Install/use the project environment from 2026master.yml."
-        ) from error
-
-    scaler = StandardScaler()
-    return scaler.fit_transform(features.to_numpy(dtype=float))
 
 
 def _validate_k_range(values: np.ndarray, k_values: Iterable[int]) -> list[int]:
@@ -354,6 +261,25 @@ def recommend_best_k(
     for metric, k in best_by_metric.items():
         lines.append(f"  - {metric}: K={k}")
     lines.extend(["", f"Recommended K: {recommended_k}", reason, ""])
+    lines.extend(
+        [
+            "Candidate cluster-size diagnostics:",
+            (
+                "  - Minimum candidate cluster size: "
+                f"{int(results['Smallest_Cluster'].min())}"
+            ),
+            (
+                "  - Maximum candidate cluster size: "
+                f"{int(results['Largest_Cluster'].max())}"
+            ),
+            "",
+            (
+                "The final K remains a documented research choice, informed by "
+                "these diagnostics and substantive interpretation."
+            ),
+            "",
+        ]
+    )
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -361,32 +287,53 @@ def recommend_best_k(
     return int(recommended_k)
 
 
+def write_preprocessing_reference(
+    artifact: PreparedArtifact, output_path: Path
+) -> None:
+    """Copy the verified preprocessing identity into a choose-K output."""
+    manifest_path = (artifact.directory / "preprocessing_config.json").resolve()
+    reference = {
+        "manifest_path": str(manifest_path),
+        "manifest_sha256": sha256_file(manifest_path),
+        "matrix_sha256": artifact.config["matrix_sha256"],
+        "scenario": artifact.config["scenario"],
+        "row_count": len(artifact.standardized_features),
+        "feature_names": list(artifact.feature_names),
+    }
+    Path(output_path).write_text(
+        json.dumps(reference, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
 def run_analysis(
-    input_file: Path,
-    scenario: str,
+    prepared_path: Path,
     output_root: Path,
     k_values: Iterable[int],
-    silhouette_sample_size: Optional[int] = SILHOUETTE_SAMPLE_SIZE,
 ) -> Path:
-    scenario = normalize_scenario(scenario)
-    print("Loading dataset...")
-    dataset = load_data(input_file, scenario)
-    print(f"Number of observations: {len(dataset.features)}")
-    print(f"Number of variables: {len(dataset.features.columns)}")
-    print("Standardizing features...")
-    values = standardize_features(dataset.features)
-    print("Running K evaluation...")
-    results = evaluate_k(values, k_values, silhouette_sample_size)
-
+    print("Loading prepared artifact...")
+    artifact = load_prepared_artifact(prepared_path)
+    scenario = str(artifact.config["scenario"])
     output_dir = Path(output_root) / scenario
-    output_dir.mkdir(parents=True, exist_ok=True)
+    if output_dir.exists():
+        raise FileExistsError(
+            f"choose-K final output directory already exists: {output_dir}"
+        )
+    values = artifact.standardized_features.to_numpy(dtype=float, copy=True)
+    valid_k = _validate_k_range(values, k_values)
+    print(f"Number of observations: {len(artifact.standardized_features)}")
+    print(f"Number of variables: {len(artifact.feature_names)}")
+    print("Running K evaluation...")
+    results = evaluate_k(values, valid_k)
+
     save_results(results, output_dir)
     plot_elbow(results, output_dir / "elbow_plot.png")
     plot_silhouette(results, output_dir / "silhouette_score.png")
     plot_calinski(results, output_dir / "calinski_harabasz.png")
     plot_davies(results, output_dir / "davies_bouldin.png")
-    recommended_k = recommend_best_k(
-        results, output_dir / "recommended_k.txt", silhouette_sample_size
+    recommended_k = recommend_best_k(results, output_dir / "recommended_k.txt")
+    write_preprocessing_reference(
+        artifact, output_dir / "preprocessing_reference.json"
     )
 
     print("Analysis completed.")
@@ -396,22 +343,13 @@ def run_analysis(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Evaluate K values for future K-means clustering."
+        description="Evaluate K values on a verified prepared clustering artifact."
     )
     parser.add_argument(
-        "-s",
-        "--scenario",
-        type=normalize_scenario,
-        choices=sorted(SCENARIO_CONFIG),
-        default=None,
-        help="Scenario to analyze: PF or TF. Prompted when omitted.",
-    )
-    parser.add_argument(
-        "-i",
-        "--input",
+        "--prepared",
         type=Path,
         default=None,
-        help="Input CSV. Defaults to the configured PF/TF feature-selection CSV.",
+        help="Prepared scenario artifact directory. Prompted when omitted.",
     )
     parser.add_argument(
         "-o",
@@ -432,33 +370,22 @@ def parse_args() -> argparse.Namespace:
         default=K_MAX,
         help=f"Maximum K to evaluate (default: {K_MAX}).",
     )
-    parser.add_argument(
-        "--silhouette-sample-size",
-        type=int,
-        default=SILHOUETTE_SAMPLE_SIZE,
-        help=(
-            "Sample size for silhouette_score. Use 0 for full data "
-            f"(default: {SILHOUETTE_SAMPLE_SIZE})."
-        ),
-    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    scenario = args.scenario if args.scenario is not None else prompt_scenario()
     if args.k_max < args.k_min:
         raise SystemExit("ERROR: --k-max must be greater than or equal to --k-min.")
-    input_file = args.input if args.input is not None else DEFAULT_INPUT_PATHS[scenario]
-    sample_size = (
-        None if args.silhouette_sample_size <= 0 else args.silhouette_sample_size
+    prepared_path = (
+        args.prepared
+        if args.prepared is not None
+        else Path(input("Prepared scenario artifact directory: ").strip())
     )
     run_analysis(
-        input_file,
-        scenario,
+        prepared_path,
         args.output_root,
         range(args.k_min, args.k_max + 1),
-        sample_size,
     )
 
 

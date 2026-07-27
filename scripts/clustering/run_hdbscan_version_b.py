@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Version B: normalized HEV features followed by StandardScaler."""
+"""Run Version B: prepared standardized features for the primary analysis."""
 
 from hdbscan_runner import main
 

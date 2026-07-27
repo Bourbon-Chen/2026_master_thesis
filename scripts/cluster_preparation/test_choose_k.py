@@ -1,221 +1,197 @@
-from argparse import Namespace
+import json
+from contextlib import ExitStack
 from pathlib import Path
-import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
 from scripts.cluster_preparation import choose_k
+from scripts.utils import clustering_preprocessing as preprocessing
+
+
+PLOT_FUNCTIONS = (
+    "plot_elbow",
+    "plot_silhouette",
+    "plot_calinski",
+    "plot_davies",
+)
 
 
 class ChooseKTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.pf_data = pd.DataFrame(
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.root = Path(self.temporary_directory.name)
+        self.source_path = self.root / "high_risk.csv"
+        self.source = pd.DataFrame(
             {
-                "fid": range(1, 13),
-                "MS_ID": [f"s{i}" for i in range(1, 13)],
-                "PF_Index_Risk_equal": np.linspace(0.1, 0.9, 12),
-                "Per_extent": [0, 0.1, 0.2, 0.1, 5, 5.1, 5.2, 5.1, 10, 10.1, 10.2, 10.1],
-                "N_PFlossR_2kiw": [0, 0.1, np.nan, 0.2, 5, 5.2, 5.1, 5.2, 10, 10.3, 10.1, 10.2],
-                "N_PFlossR_2kmw": [0.1, 0, 0.2, 0.1, 4.9, 5.1, 5.2, 5, 10.1, 10, 10.2, 10.3],
-                "PFResident_lossR": [0, -0.1, -0.2, -0.1, -5, -5.1, -5.2, -5.1, -10, -10.1, -10.2, -10.1],
-                "PFDaynight_lossR": [0, -0.2, -0.1, np.nan, -5, -5.2, -5.1, -5.2, -10, -10.2, -10.1, -10.3],
-                "PFAB5k_NOR": [0, 0.1, 0.2, 0.1, 4.8, 5, 5.1, 5.2, 9.9, 10, 10.2, 10.1],
-                "PFABC_NOR": [0.2, 0.1, 0, 0.1, 5.1, 5, 4.9, 5.2, 10.2, 10.1, 10, 10.3],
-                "unrelated_numeric": np.arange(12),
-                "TFAB5k_NOR": np.arange(100, 112),
+                "fid": [10, 11, 12, 13, 14],
+                "MS_ID": ["s0", "s1", "s2", "s3", "s4"],
+                "PF_Index_Risk_equal": [0.3, 0.4, 0.5, 0.6, 0.7],
+                "Per_extent": [-1.0, 0.0, 1.0, np.nan, 0.5],
+                "PFABC_NOR": [-0.8, -0.2, 0.2, 0.8, 1.0],
+                "PFResident_lossR": [-0.4, -0.1, 0.0, 0.3, 0.7],
+                "TFABC_NOR": [99.0, 98.0, 97.0, 96.0, 95.0],
             }
         )
+        self.source.to_csv(self.source_path, index=False)
+        prepared = preprocessing.prepare_clustering_data(self.source, "PF")
+        self.artifact_dir = preprocessing.save_prepared_artifact(
+            prepared=prepared,
+            source_path=self.source_path,
+            output_root=self.root / "prepared",
+            risk_filter={
+                "column": "PF_Index_Risk_equal",
+                "operator": ">",
+                "threshold": 0.25,
+            },
+        )
+        self.artifact = preprocessing.load_prepared_artifact(self.artifact_dir)
 
-    def test_load_data_uses_strict_pf_whitelist_and_fill_zero(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            input_path = Path(temporary_directory) / "pf.csv"
-            original = self.pf_data.copy(deep=True)
-            original.to_csv(input_path, index=False)
+    def tearDown(self) -> None:
+        self.temporary_directory.cleanup()
 
-            loaded = choose_k.load_data(input_path, "PF")
-            reread = pd.read_csv(input_path)
+    def patch_plots(self, stack: ExitStack) -> None:
+        for function_name in PLOT_FUNCTIONS:
+            stack.enter_context(patch.object(choose_k, function_name))
 
-        self.assertEqual(loaded.scenario, "PF")
-        self.assertEqual(list(loaded.features.columns), list(choose_k.PF_FEATURES))
-        self.assertEqual(list(loaded.metadata.columns), list(choose_k.PF_METADATA_COLUMNS))
-        self.assertFalse(loaded.features.isna().any().any())
-        self.assertEqual(int(loaded.fill_counts["N_PFlossR_2kiw"]), 1)
-        pd.testing.assert_frame_equal(reread, original)
-
-    def test_load_data_uses_strict_tf_whitelist(self) -> None:
-        tf_data = pd.DataFrame(
+    def test_run_analysis_passes_exact_prepared_matrix_to_k_evaluation_without_scaling(
+        self,
+    ) -> None:
+        expected = pd.DataFrame(
             {
-                "fid": [1, 2, 3, 4],
-                "MS_ID": ["t1", "t2", "t3", "t4"],
-                "TF_Index_Risk_equal": [0.1, 0.2, 0.3, 0.4],
-                "Tem_extent": [0.1, 0.2, 5.0, 5.2],
-                "N_TFlossR_2kiw": [0.0, np.nan, 5.1, 5.2],
-                "N_TFlossR_2kmw": [0.2, 0.1, 5.0, 5.1],
-                "TFResident_lossR": [-0.1, -0.2, -5.0, -5.1],
-                "TFDaynight_lossR": [-0.2, -0.1, -5.1, -5.2],
-                "TFAB5k_NOR": [0.2, 0.1, 5.0, 5.2],
-                "TFABC_NOR": [0.1, 0.2, 5.1, 5.0],
-                "PFAB5k_NOR": [99, 98, 97, 96],
+                "K": [2, 3, 4],
+                "Inertia": [3.0, 2.0, 1.0],
+                "Silhouette": [0.3, 0.2, 0.1],
+                "Calinski_Harabasz": [4.0, 3.0, 2.0],
+                "Davies_Bouldin": [0.4, 0.5, 0.6],
+                "Largest_Cluster": [3, 2, 2],
+                "Smallest_Cluster": [2, 1, 1],
+                "Cluster_Size_SD": [0.5, 0.4, 0.3],
             }
         )
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            input_path = Path(temporary_directory) / "tf.csv"
-            tf_data.to_csv(input_path, index=False)
+        output_root = self.root / "outputs_choose_k"
 
-            loaded = choose_k.load_data(input_path, "TF")
+        with ExitStack() as stack:
+            self.patch_plots(stack)
+            stack.enter_context(
+                patch.object(
+                    StandardScaler,
+                    "fit",
+                    side_effect=AssertionError("choose-K must not fit a scaler"),
+                )
+            )
+            evaluate = stack.enter_context(
+                patch.object(choose_k, "evaluate_k", return_value=expected)
+            )
+            output_dir = choose_k.run_analysis(
+                prepared_path=self.artifact_dir,
+                output_root=output_root,
+                k_values=range(2, 5),
+            )
 
-        self.assertEqual(list(loaded.features.columns), list(choose_k.TF_FEATURES))
-        self.assertEqual(list(loaded.metadata.columns), list(choose_k.TF_METADATA_COLUMNS))
-        self.assertEqual(int(loaded.fill_counts["N_TFlossR_2kiw"]), 1)
-
-    def test_load_data_rejects_missing_required_columns(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            input_path = Path(temporary_directory) / "bad.csv"
-            self.pf_data.drop(columns=["PFABC_NOR"]).to_csv(input_path, index=False)
-
-            with self.assertRaisesRegex(ValueError, "PFABC_NOR"):
-                choose_k.load_data(input_path, "PF")
-
-    def test_standardize_features_centers_values(self) -> None:
-        loaded = choose_k.PreparedDataset(
-            scenario="PF",
-            metadata=self.pf_data[list(choose_k.PF_METADATA_COLUMNS)].copy(),
-            features=self.pf_data[list(choose_k.PF_FEATURES)].fillna(0).copy(),
-            fill_counts=pd.Series(0, index=choose_k.PF_FEATURES),
+        np.testing.assert_allclose(
+            evaluate.call_args.args[0],
+            self.artifact.standardized_features.to_numpy(dtype=float),
+        )
+        self.assertEqual(evaluate.call_args.args[1], [2, 3, 4])
+        self.assertEqual(output_dir, output_root / "PF")
+        reference = json.loads(
+            (output_dir / "preprocessing_reference.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertEqual(
+            reference,
+            {
+                "manifest_path": str(
+                    (self.artifact_dir / "preprocessing_config.json").resolve()
+                ),
+                "manifest_sha256": preprocessing.sha256_file(
+                    self.artifact_dir / "preprocessing_config.json"
+                ),
+                "matrix_sha256": self.artifact.config["matrix_sha256"],
+                "scenario": "PF",
+                "row_count": 5,
+                "feature_names": list(self.artifact.feature_names),
+            },
         )
 
-        scaled = choose_k.standardize_features(loaded.features)
-
-        self.assertEqual(scaled.shape, (12, 7))
-        np.testing.assert_allclose(scaled.mean(axis=0), np.zeros(7), atol=1e-12)
-
-    def test_evaluate_k_returns_metrics_without_cluster_labels(self) -> None:
-        loaded = choose_k.PreparedDataset(
-            scenario="PF",
-            metadata=self.pf_data[list(choose_k.PF_METADATA_COLUMNS)].copy(),
-            features=self.pf_data[list(choose_k.PF_FEATURES)].fillna(0).copy(),
-            fill_counts=pd.Series(0, index=choose_k.PF_FEATURES),
+    def test_evaluate_k_returns_metrics_and_candidate_cluster_sizes(self) -> None:
+        result = choose_k.evaluate_k(
+            self.artifact.standardized_features.to_numpy(dtype=float), range(2, 5)
         )
-        values = choose_k.standardize_features(loaded.features)
-
-        result = choose_k.evaluate_k(values, range(2, 5))
 
         self.assertEqual(result["K"].tolist(), [2, 3, 4])
-        self.assertEqual(
-            result.columns.tolist(),
-            [
-                "K",
-                "Inertia",
-                "Silhouette",
-                "Calinski_Harabasz",
-                "Davies_Bouldin",
-                "Largest_Cluster",
-                "Smallest_Cluster",
-                "Cluster_Size_SD",
-            ],
-        )
-        self.assertNotIn("Cluster_Label", result.columns)
+        self.assertEqual(result.columns.tolist(), choose_k.K_EVALUATION_COLUMNS)
         self.assertTrue(np.isfinite(result["Silhouette"]).all())
-
-    def test_default_silhouette_sample_size_is_configured(self) -> None:
-        self.assertEqual(choose_k.SILHOUETTE_SAMPLE_SIZE, 10000)
-
-    def test_parse_args_accepts_case_insensitive_scenario(self) -> None:
-        for entered, expected in (
-            ("PF", "PF"),
-            ("pf", "PF"),
-            ("TF", "TF"),
-            ("tf", "TF"),
-        ):
-            with self.subTest(entered=entered):
-                with patch.object(
-                    sys, "argv", ["choose_k.py", "--scenario", entered]
-                ):
-                    self.assertEqual(choose_k.parse_args().scenario, expected)
-
-    def test_parse_args_leaves_omitted_scenario_unset(self) -> None:
-        with patch.object(sys, "argv", ["choose_k.py"]):
-            self.assertIsNone(choose_k.parse_args().scenario)
-
-    def test_prompt_scenario_retries_and_normalizes(self) -> None:
-        with patch("builtins.input", side_effect=["invalid", " tf "]), patch(
-            "builtins.print"
-        ) as mocked_print:
-            self.assertEqual(choose_k.prompt_scenario(), "TF")
-
-        mocked_print.assert_called_once_with("Please enter PF or TF.")
-
-    def test_main_prompts_when_scenario_is_omitted(self) -> None:
-        args = Namespace(
-            scenario=None,
-            input=None,
-            output_root=Path("output"),
-            k_min=2,
-            k_max=3,
-            silhouette_sample_size=10000,
-        )
-        with patch.object(choose_k, "parse_args", return_value=args), patch.object(
-            choose_k, "prompt_scenario", return_value="TF"
-        ) as mocked_prompt, patch.object(
-            choose_k, "run_analysis"
-        ) as mocked_run:
-            choose_k.main()
-
-        mocked_prompt.assert_called_once_with()
-        mocked_run.assert_called_once_with(
-            choose_k.DEFAULT_INPUT_PATHS["TF"],
-            "TF",
-            args.output_root,
-            range(2, 4),
-            10000,
+        self.assertGreaterEqual(result["Smallest_Cluster"].min(), 1)
+        self.assertGreaterEqual(
+            result["Largest_Cluster"].max(), result["Smallest_Cluster"].min()
         )
 
-    def test_main_does_not_prompt_when_scenario_is_supplied(self) -> None:
-        args = Namespace(
-            scenario="PF",
-            input=None,
-            output_root=Path("output"),
-            k_min=2,
-            k_max=3,
-            silhouette_sample_size=10000,
-        )
-        with patch.object(choose_k, "parse_args", return_value=args), patch.object(
-            choose_k, "prompt_scenario"
-        ) as mocked_prompt, patch.object(
-            choose_k, "run_analysis"
-        ) as mocked_run:
-            choose_k.main()
+    def test_run_analysis_rejects_an_existing_final_output_directory(self) -> None:
+        """Reusing a scenario directory would overwrite an earlier K evaluation."""
+        output_root = self.root / "outputs_choose_k"
+        final_directory = output_root / "PF"
+        final_directory.mkdir(parents=True)
+        sentinel = final_directory / "existing.txt"
+        sentinel.write_text("preserve", encoding="utf-8")
 
-        mocked_prompt.assert_not_called()
-        mocked_run.assert_called_once_with(
-            choose_k.DEFAULT_INPUT_PATHS["PF"],
-            "PF",
-            args.output_root,
-            range(2, 4),
-            10000,
-        )
+        with self.assertRaisesRegex(FileExistsError, "already exists"):
+            choose_k.run_analysis(self.artifact_dir, output_root, range(2, 5))
 
-    def test_plots_results_and_recommendation_are_saved(self) -> None:
-        values = choose_k.standardize_features(
-            self.pf_data[list(choose_k.PF_FEATURES)].fillna(0)
-        )
-        result = choose_k.evaluate_k(values, range(2, 5))
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve")
 
+    def test_recommendation_reports_cluster_size_range_and_research_choice(self) -> None:
+        results = pd.DataFrame(
+            {
+                "K": [2, 3, 4],
+                "Inertia": [9.0, 6.0, 5.0],
+                "Silhouette": [0.2, 0.5, 0.4],
+                "Calinski_Harabasz": [10.0, 12.0, 11.0],
+                "Davies_Bouldin": [1.0, 0.7, 0.8],
+                "Largest_Cluster": [4, 3, 2],
+                "Smallest_Cluster": [2, 1, 1],
+                "Cluster_Size_SD": [1.0, 0.8, 0.5],
+            }
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            report_path = Path(temporary_directory) / "recommended_k.txt"
+            recommendation = choose_k.recommend_best_k(results, report_path)
+            report = report_path.read_text(encoding="utf-8")
+
+        self.assertEqual(recommendation, 3)
+        self.assertIn("Minimum candidate cluster size: 1", report)
+        self.assertIn("Maximum candidate cluster size: 4", report)
+        self.assertIn("final K remains a documented research choice", report)
+
+    def test_plots_and_results_are_saved(self) -> None:
+        results = pd.DataFrame(
+            {
+                "K": [2, 3],
+                "Inertia": [9.0, 6.0],
+                "Silhouette": [0.2, 0.5],
+                "Calinski_Harabasz": [10.0, 12.0],
+                "Davies_Bouldin": [1.0, 0.7],
+                "Largest_Cluster": [4, 3],
+                "Smallest_Cluster": [1, 1],
+                "Cluster_Size_SD": [1.0, 0.8],
+            }
+        )
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_dir = Path(temporary_directory)
-            choose_k.save_results(result, output_dir)
-            recommendation = choose_k.recommend_best_k(result, output_dir / "recommended_k.txt")
-            choose_k.plot_elbow(result, output_dir / "elbow_plot.png")
-            choose_k.plot_silhouette(result, output_dir / "silhouette_score.png")
-            choose_k.plot_calinski(result, output_dir / "calinski_harabasz.png")
-            choose_k.plot_davies(result, output_dir / "davies_bouldin.png")
+            choose_k.save_results(results, output_dir)
+            choose_k.recommend_best_k(results, output_dir / "recommended_k.txt")
+            choose_k.plot_elbow(results, output_dir / "elbow_plot.png")
+            choose_k.plot_silhouette(results, output_dir / "silhouette_score.png")
+            choose_k.plot_calinski(results, output_dir / "calinski_harabasz.png")
+            choose_k.plot_davies(results, output_dir / "davies_bouldin.png")
 
             actual = {path.name for path in output_dir.iterdir()}
-            report = (output_dir / "recommended_k.txt").read_text(encoding="utf-8")
 
         self.assertEqual(
             actual,
@@ -228,19 +204,17 @@ class ChooseKTests(unittest.TestCase):
                 "davies_bouldin.png",
             },
         )
-        self.assertIn("Recommended K:", report)
-        self.assertIn(str(recommendation), report)
 
-    def test_run_analysis_writes_outputs_choose_k_uppercase_scenario_directory(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            input_path = root / "pf.csv"
-            output_root = root / "outputs_choose_k"
-            self.pf_data.to_csv(input_path, index=False)
+    def test_cli_accepts_prepared_artifact_and_defaults_output_root(self) -> None:
+        with patch.object(
+            __import__("sys"),
+            "argv",
+            ["choose_k.py", "--prepared", str(self.artifact_dir)],
+        ):
+            args = choose_k.parse_args()
 
-            output_dir = choose_k.run_analysis(input_path, "PF", output_root, range(2, 4))
-
-        self.assertEqual(output_dir, output_root / "PF")
+        self.assertEqual(args.prepared, self.artifact_dir)
+        self.assertEqual(args.output_root, choose_k.OUTPUT_ROOT)
 
 
 if __name__ == "__main__":

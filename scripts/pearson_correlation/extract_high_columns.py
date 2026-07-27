@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
-"""Create PF- or TF-specific datasets for PCA and Elbow analysis."""
+"""Legacy compatibility export; not an active PCA or Elbow input source."""
 
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
+import warnings
 
 import pandas as pd
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
-DEFAULT_INPUT = DATA_DIR / "MT_UPDATE_MS_HEV_v2_NORcleaned.csv"
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "outputs_correlation"
 IDENTIFIER_COLUMNS = ("fid", "MS_ID")
+LEGACY_NOTICE = (
+    "DEPRECATED: extract_high_columns.py is a legacy export tool. Active PCA,\n"
+    "K-selection, K-means, and HDBSCAN workflows must use\n"
+    "prepare_clustering_inputs.py and an explicit exclusion JSON."
+)
 
 SCENARIO_CONFIG: Dict[str, Dict[str, object]] = {
     "pf": {
@@ -40,12 +45,6 @@ SCENARIO_CONFIG: Dict[str, Dict[str, object]] = {
         "output_name": "tf_for_PCA.csv",
     },
 }
-
-
-def prompt_input_path(default_path: Path = DEFAULT_INPUT) -> Path:
-    """Prompt for an input CSV path, using the configured path when blank."""
-    entered_path = input(f"Enter input CSV path [{default_path}]: ").strip()
-    return Path(entered_path) if entered_path else default_path
 
 
 def _scenario_config(scenario: str) -> Dict[str, object]:
@@ -237,11 +236,8 @@ def parse_args() -> argparse.Namespace:
         "-i",
         "--input",
         type=Path,
-        default=None,
-        help=(
-            "Input CSV path "
-            f"(prompted when omitted; blank uses: {DEFAULT_INPUT})"
-        ),
+        required=True,
+        help="Explicit input CSV path for this legacy export.",
     )
     parser.add_argument(
         "-s",
@@ -272,10 +268,13 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    raw_input_path = (
-        args.input if args.input is not None else prompt_input_path()
+    warnings.warn(
+        LEGACY_NOTICE,
+        DeprecationWarning,
+        stacklevel=2,
     )
-    input_path = resolve_input_path(raw_input_path)
+    print(LEGACY_NOTICE)
+    input_path = resolve_input_path(args.input)
     scenario = args.scenario or prompt_scenario()
     available_columns = pd.read_csv(input_path, nrows=0).columns
 

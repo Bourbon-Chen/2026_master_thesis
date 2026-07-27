@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Analyze Pearson correlations among PF and TF clustering candidates.
 
-The script profiles candidate features, reports data-quality concerns, and
-calculates scenario-specific Pearson correlations using pairwise complete
-finite observations. It never edits the source data or automatically removes
-features. Correlation identifies linear association, not causation.
+The script profiles dynamically discovered scenario features, reports
+data-quality concerns, structurally zero-fills semantic nulls, and calculates
+scenario-specific Pearson correlations without scaling. It never edits the
+source data or automatically removes features. Correlation identifies linear
+association, not causation.
 """
 
 from __future__ import annotations
 
 import argparse
+import math
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
@@ -20,6 +22,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
+
+from scripts.utils.clustering_preprocessing import (
+    prepare_semantic_features,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -51,59 +57,31 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help=f"Input CSV path (prompted when omitted; blank uses: {INPUT_FILE})",
     )
+    parser.add_argument(
+        "--scenario",
+        type=str.upper,
+        choices=("PF", "TF"),
+        default=None,
+        help="Correlation scenario (prompted when omitted).",
+    )
     return parser.parse_args()
-
-
-PF_FEATURE_GROUPS: Dict[str, Sequence[str]] = {
-    "flood_exposure": ["Per_extent"],
-    "accessibility_loss": [
-        "N_PFlossR_2kiw",
-        "N_PFlossR_2ktw",
-        "N_PFlossR_2kmw",
-    ],
-    "population_loss": [
-        "PFResident_lossR",
-        "PFDaynight_lossR",
-        "PFPRM_lossR",
-    ],
-    "centrality_influence": ["PFAB2k_NOR", "PFAB5k_NOR", "PFABC_NOR"],
-}
-
-TF_FEATURE_GROUPS: Dict[str, Sequence[str]] = {
-    "flood_exposure": ["Tem_extent"],
-    "accessibility_loss": [
-        "N_TFlossR_2kiw",
-        "N_TFlossR_2ktw",
-        "N_TFlossR_2kmw",
-    ],
-    "population_loss": [
-        "TFResident_lossR",
-        "TFDaynight_lossR",
-        "TFPRM_lossR",
-    ],
-    "centrality_influence": ["TFAB2k_NOR", "TFAB5k_NOR", "TFABC_NOR"],
-}
-
-SCENARIO_FEATURE_GROUPS: Dict[str, Mapping[str, Sequence[str]]] = {
-    "PF": PF_FEATURE_GROUPS,
-    "TF": TF_FEATURE_GROUPS,
-}
 
 
 def prompt_scenario() -> str:
     """Prompt until the user selects the PF or TF correlation scenario."""
     while True:
         scenario = input("Enter correlation scenario (pf/tf): ").strip().upper()
-        if scenario in SCENARIO_FEATURE_GROUPS:
+        if scenario in {"PF", "TF"}:
             return scenario
         print("Scenario must be 'pf' or 'tf'.")
 
 
 EXPECTED_RANGES: Dict[str, Tuple[float, float]] = {
-    "flood_exposure": (0.0, 1.0),
-    "accessibility_loss": (-1.0, 1.0),
-    "population_loss": (-1.0, 0.0),
-    "centrality_influence": (0.0, 1.0),
+    "extent": (-1.0, 1.0),
+    "network_loss": (-1.0, 1.0),
+    "population_exposure": (-1.0, 1.0),
+    "accessibility": (-1.0, 1.0),
+    "other_scenario_indicator": (-1.0, 1.0),
 }
 
 
@@ -115,6 +93,7 @@ FEATURE_SUMMARY_COLUMNS = [
     "count",
     "missing_count",
     "missing_percentage",
+    "filled_zero_count",
     "unique_count",
     "min",
     "max",
@@ -210,17 +189,59 @@ def build_feature_group_mapping(
     return mapping
 
 
+def correlation_group(column: str) -> str:
+    """Return the deterministic reporting group for a discovered feature."""
+    lowered = column.lower()
+    if lowered.startswith(("per_", "tem_")):
+        return "extent"
+    if lowered.startswith(("n_pf", "n_tf")):
+        return "network_loss"
+    if "resident" in lowered or "daynight" in lowered:
+        return "population_exposure"
+    if "ab5k" in lowered or "abc" in lowered:
+        return "accessibility"
+    return "other_scenario_indicator"
+
+
+def _group_discovered_features(
+    feature_names: Sequence[str],
+) -> Dict[str, list[str]]:
+    feature_groups: Dict[str, list[str]] = {}
+    for feature in feature_names:
+        feature_groups.setdefault(correlation_group(feature), []).append(feature)
+    return feature_groups
+
+
+def _prepare_correlation_data(data: pd.DataFrame, scenario: str):
+    prepared = prepare_semantic_features(data, scenario)
+    feature_groups = _group_discovered_features(prepared.feature_names)
+    return prepared, feature_groups
+
+
+def prepare_correlation_features(
+    data: pd.DataFrame, scenario: str
+) -> Tuple[Dict[str, list[str]], pd.DataFrame, pd.DataFrame]:
+    """Return dynamic groups plus original and structural-zero-filled features."""
+    prepared, feature_groups = _prepare_correlation_data(data, scenario)
+    return (
+        feature_groups,
+        prepared.original_features,
+        prepared.filled_features,
+    )
+
+
 def create_feature_summary(
-    data: pd.DataFrame,
+    original_data: pd.DataFrame,
+    filled_data: pd.DataFrame,
     scenario: str,
     feature_groups: Mapping[str, Sequence[str]],
 ) -> pd.DataFrame:
     """Create descriptive and missingness statistics for scenario features."""
     records = []
-    total_rows = len(data)
+    total_rows = len(original_data)
     for theoretical_group, features in feature_groups.items():
         for feature in features:
-            series = data[feature]
+            series = original_data[feature]
             count = int(series.count())
             missing_count = int(series.isna().sum())
             record: Dict[str, Any] = {
@@ -233,6 +254,7 @@ def create_feature_summary(
                 "missing_percentage": (
                     missing_count / total_rows * 100.0 if total_rows else np.nan
                 ),
+                "filled_zero_count": int(filled_data[feature].eq(0.0).sum()),
                 "unique_count": int(series.nunique(dropna=True)),
                 "min": np.nan,
                 "max": np.nan,
@@ -400,6 +422,32 @@ def check_data_quality(
     return warnings
 
 
+def _explicit_pearson(
+    left_values: np.ndarray, right_values: np.ndarray
+) -> float:
+    """Calculate Pearson r from paired finite float arrays without covariance APIs."""
+    if left_values.size < 2:
+        return np.nan
+
+    left_centered = left_values - left_values.mean()
+    right_centered = right_values - right_values.mean()
+    left_sum_of_squares = float(np.sum(left_centered * left_centered))
+    right_sum_of_squares = float(np.sum(right_centered * right_centered))
+    if left_sum_of_squares == 0.0 or right_sum_of_squares == 0.0:
+        return np.nan
+
+    cross_product_sum = float(np.sum(left_centered * right_centered))
+    coefficient = cross_product_sum / math.sqrt(
+        left_sum_of_squares * right_sum_of_squares
+    )
+    tiny_overshoot = 8.0 * np.finfo(np.float64).eps
+    if 1.0 < coefficient <= 1.0 + tiny_overshoot:
+        return 1.0
+    if -1.0 - tiny_overshoot <= coefficient < -1.0:
+        return -1.0
+    return coefficient
+
+
 def calculate_pairwise_correlation(
     data: pd.DataFrame, features: Sequence[str]
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -412,7 +460,9 @@ def calculate_pairwise_correlation(
         0, index=feature_list, columns=feature_list, dtype=int
     )
     numeric_data = {
-        feature: pd.to_numeric(data[feature], errors="coerce")
+        feature: pd.to_numeric(data[feature], errors="coerce").to_numpy(
+            dtype=float
+        )
         for feature in feature_list
     }
 
@@ -421,27 +471,15 @@ def calculate_pairwise_correlation(
         for right_index in range(left_index, len(feature_list)):
             right_feature = feature_list[right_index]
             right = numeric_data[right_feature]
-            valid_mask = pd.Series(
-                np.isfinite(left.to_numpy(dtype=float))
-                & np.isfinite(right.to_numpy(dtype=float)),
-                index=data.index,
-            )
+            valid_mask = np.isfinite(left) & np.isfinite(right)
             pairwise_n = int(valid_mask.sum())
             pairwise_counts.loc[left_feature, right_feature] = pairwise_n
             pairwise_counts.loc[right_feature, left_feature] = pairwise_n
 
-            pearson_r = np.nan
-            if pairwise_n >= 2:
-                left_complete = left.loc[valid_mask]
-                right_complete = right.loc[valid_mask]
-                if (
-                    left_complete.nunique(dropna=True) > 1
-                    and right_complete.nunique(dropna=True) > 1
-                ):
-                    if left_feature == right_feature:
-                        pearson_r = 1.0
-                    else:
-                        pearson_r = float(left_complete.corr(right_complete))
+            pearson_r = _explicit_pearson(
+                left[valid_mask],
+                right[valid_mask],
+            )
 
             correlation_matrix.loc[left_feature, right_feature] = pearson_r
             correlation_matrix.loc[right_feature, left_feature] = pearson_r
@@ -502,6 +540,7 @@ def build_correlation_pairs_table(
 
 def save_correlation_outputs(
     scenario_output_directory: Path,
+    feature_roles: pd.DataFrame,
     feature_summary: pd.DataFrame,
     quality_warnings: pd.DataFrame,
     correlation_matrix: pd.DataFrame,
@@ -520,6 +559,11 @@ def save_correlation_outputs(
         ~high_pairs["same_group"].astype(bool)
     ].copy().reset_index(drop=True)
 
+    feature_roles.to_csv(
+        scenario_output_directory / "feature_roles.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
     feature_summary.to_csv(
         scenario_output_directory / "feature_summary.csv",
         index=False,
@@ -735,7 +779,8 @@ def write_text_report(
         "Pearson Correlation Analysis Report",
         "=" * 35,
         f"High-correlation rule: absolute Pearson r > {threshold:.2f}",
-        "Pairwise complete finite observations were used; no imputation was applied.",
+        "Preprocessing: structural null -> 0.0.",
+        "StandardScaler not applied because Pearson correlation is affine-invariant.",
         "Correlation does not imply causation.",
         "",
     ]
@@ -816,30 +861,37 @@ def write_text_report(
 def analyze_scenario(
     data: pd.DataFrame,
     scenario: str,
-    feature_groups: Mapping[str, Sequence[str]],
     scenario_output_directory: Path,
     threshold: float,
-    expected_ranges: Mapping[str, Tuple[float, float]],
 ) -> Dict[str, Any]:
     """Run all quality, correlation, output, and chart steps for one scenario."""
-    features = _flatten_features(feature_groups)
+    prepared, feature_groups = _prepare_correlation_data(data, scenario)
+    original = prepared.original_features
+    filled = prepared.filled_features
+    features = list(prepared.feature_names)
     feature_mapping = build_feature_group_mapping(feature_groups)
-    feature_summary = create_feature_summary(data, scenario, feature_groups)
+    feature_summary = create_feature_summary(
+        original, filled, prepared.discovery.scenario, feature_groups
+    )
     quality_warnings = check_data_quality(
-        data, scenario, feature_groups, expected_ranges
+        original,
+        prepared.discovery.scenario,
+        feature_groups,
+        EXPECTED_RANGES,
     )
     correlation_matrix, pairwise_counts = calculate_pairwise_correlation(
-        data, features
+        filled, features
     )
     all_pairs = build_correlation_pairs_table(
         correlation_matrix,
         pairwise_counts,
-        scenario,
+        prepared.discovery.scenario,
         feature_mapping,
         threshold,
     )
     split_pairs = save_correlation_outputs(
         scenario_output_directory,
+        prepared.discovery.column_roles,
         feature_summary,
         quality_warnings,
         correlation_matrix,
@@ -847,19 +899,23 @@ def analyze_scenario(
     )
     plot_full_heatmap(
         correlation_matrix,
-        scenario,
+        prepared.discovery.scenario,
         threshold,
         Path(scenario_output_directory) / "pearson_correlation_heatmap.png",
     )
     plot_high_correlation_heatmap(
         correlation_matrix,
-        scenario,
+        prepared.discovery.scenario,
         threshold,
         Path(scenario_output_directory) / "high_correlation_heatmap.png",
     )
 
     return {
         "features": features,
+        "feature_groups": feature_groups,
+        "feature_roles": prepared.discovery.column_roles,
+        "original_features": original,
+        "filled_features": filled,
         "feature_summary": feature_summary,
         "quality_warnings": quality_warnings,
         "correlation_matrix": correlation_matrix,
@@ -875,24 +931,19 @@ def main() -> None:
     input_file = (
         args.input if args.input is not None else prompt_input_path()
     ).resolve()
-    scenario = prompt_scenario()
+    scenario = args.scenario if args.scenario is not None else prompt_scenario()
     print("Loading dataset...")
     data = load_data(input_file)
     print(f"Dataset shape: {len(data)} rows × {len(data.columns)} columns")
-    feature_groups = SCENARIO_FEATURE_GROUPS[scenario]
-    selected_feature_groups = {scenario: feature_groups}
-    validate_columns(data, selected_feature_groups)
-
     print(f"\nRunning {scenario} correlation analysis...")
-    print(f"{scenario} features: {len(_flatten_features(feature_groups))}")
     result = analyze_scenario(
         data,
         scenario,
-        feature_groups,
         OUTPUT_DIRECTORY / scenario,
         CORRELATION_THRESHOLD,
-        EXPECTED_RANGES,
     )
+    selected_feature_groups = {scenario: result["feature_groups"]}
+    print(f"{scenario} features: {len(result['features'])}")
     scenario_results = {scenario: result}
     print(f"{scenario} high-correlation pairs: {len(result['high_pairs'])}")
     print(

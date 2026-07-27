@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import numpy as np
@@ -15,6 +16,15 @@ from scripts.pearson_correlation import correlation_analysis as ca
 
 class CorrelationAnalysisTests(unittest.TestCase):
     """Verify correlation, quality, reporting, and plotting behavior."""
+
+    def test_parse_args_accepts_case_insensitive_scenario(self) -> None:
+        with mock.patch(
+            "sys.argv",
+            ["correlation_analysis.py", "--scenario", "tf"],
+        ):
+            args = ca.parse_args()
+
+        self.assertEqual(args.scenario, "TF")
 
     def test_load_data_and_validate_columns(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -46,10 +56,49 @@ class CorrelationAnalysisTests(unittest.TestCase):
             {"flood": "exposure", "loss_a": "loss", "loss_b": "loss"},
         )
 
+    def test_prepare_correlation_features_uses_dynamic_scenario_discovery(self) -> None:
+        data = pd.DataFrame(
+            {
+                "fid": [1, 2, 3],
+                "MS_ID": ["a", "b", "c"],
+                "PF_Index_Risk_equal": [0.4, 0.5, 0.6],
+                "Per_extent": [0.0, 0.2, 0.4],
+                "N_PFlossR_2kiw": [-1.0, np.nan, 1.0],
+                "PFResident_lossR": [0.0, -0.2, -0.4],
+                "PFABC_NOR": [0.1, 0.2, 0.3],
+                "Tem_extent": [0.3, 0.2, 0.1],
+                "TFABC_NOR": [0.4, 0.5, 0.6],
+                "Street_type_NOR": [0.2, 0.3, 0.4],
+                "unrelated_numeric": [10.0, 20.0, 30.0],
+            }
+        )
+
+        feature_groups, original, filled = ca.prepare_correlation_features(
+            data, "PF"
+        )
+
+        self.assertEqual(
+            tuple(filled.columns),
+            ("Per_extent", "N_PFlossR_2kiw", "PFResident_lossR", "PFABC_NOR"),
+        )
+        self.assertTrue(np.isnan(original.loc[1, "N_PFlossR_2kiw"]))
+        self.assertEqual(filled.loc[1, "N_PFlossR_2kiw"], 0.0)
+        self.assertNotIn("TFABC_NOR", filled.columns)
+        self.assertNotIn("PF_Index_Risk_equal", filled.columns)
+        self.assertEqual(feature_groups["extent"], ["Per_extent"])
+        self.assertEqual(feature_groups["network_loss"], ["N_PFlossR_2kiw"])
+        self.assertEqual(
+            feature_groups["population_exposure"], ["PFResident_lossR"]
+        )
+        self.assertEqual(feature_groups["accessibility"], ["PFABC_NOR"])
+
     def test_create_feature_summary_has_required_statistics(self) -> None:
         frame = pd.DataFrame({"a": [1.0, np.nan, 3.0], "b": ["x", None, "y"]})
         summary = ca.create_feature_summary(
-            frame, "PF", {"numeric": ["a"], "text": ["b"]}
+            frame,
+            frame.fillna(0.0),
+            "PF",
+            {"numeric": ["a"], "text": ["b"]},
         )
 
         expected_columns = [
@@ -60,6 +109,7 @@ class CorrelationAnalysisTests(unittest.TestCase):
             "count",
             "missing_count",
             "missing_percentage",
+            "filled_zero_count",
             "unique_count",
             "min",
             "max",
@@ -74,6 +124,7 @@ class CorrelationAnalysisTests(unittest.TestCase):
         self.assertEqual(numeric["count"], 2)
         self.assertEqual(numeric["missing_count"], 1)
         self.assertAlmostEqual(numeric["missing_percentage"], 100 / 3)
+        self.assertEqual(numeric["filled_zero_count"], 1)
         self.assertAlmostEqual(numeric["median"], 2.0)
         self.assertTrue(np.isnan(summary.set_index("feature").loc["b", "mean"]))
 
@@ -114,19 +165,45 @@ class CorrelationAnalysisTests(unittest.TestCase):
         frame = pd.DataFrame(
             {
                 "a": [1.0, 2.0, np.nan, 4.0],
-                "b": [2.0, 4.0, 6.0, np.nan],
+                "positive": [2.0, 4.0, 6.0, np.nan],
+                "negative": [-2.0, -4.0, -6.0, np.nan],
                 "constant": [1.0, 1.0, 1.0, 1.0],
+                "single_pair": [10.0, np.nan, np.nan, np.nan],
             }
         )
-        matrix, counts = ca.calculate_pairwise_correlation(
-            frame, ["a", "b", "constant"]
-        )
+        with (
+            mock.patch.object(
+                pd.Series,
+                "corr",
+                side_effect=AssertionError("Series.corr must not be used"),
+            ),
+            mock.patch.object(
+                np,
+                "corrcoef",
+                side_effect=AssertionError("np.corrcoef must not be used"),
+            ),
+            mock.patch.object(
+                np,
+                "cov",
+                side_effect=AssertionError("np.cov must not be used"),
+            ),
+        ):
+            matrix, counts = ca.calculate_pairwise_correlation(
+                frame,
+                ["a", "positive", "negative", "constant", "single_pair"],
+            )
 
-        self.assertEqual(counts.loc["a", "b"], 2)
-        self.assertAlmostEqual(matrix.loc["a", "b"], 1.0)
+        self.assertEqual(counts.loc["a", "positive"], 2)
+        self.assertAlmostEqual(matrix.loc["a", "positive"], 1.0)
+        self.assertAlmostEqual(matrix.loc["a", "negative"], -1.0)
+        self.assertEqual(matrix.loc["a", "positive"], matrix.loc["positive", "a"])
+        self.assertEqual(matrix.loc["a", "negative"], matrix.loc["negative", "a"])
+        self.assertEqual(matrix.loc["a", "a"], 1.0)
         self.assertEqual(counts.loc["a", "constant"], 3)
         self.assertTrue(np.isnan(matrix.loc["a", "constant"]))
         self.assertTrue(np.isnan(matrix.loc["constant", "constant"]))
+        self.assertEqual(counts.loc["a", "single_pair"], 1)
+        self.assertTrue(np.isnan(matrix.loc["a", "single_pair"]))
 
     def test_build_pairs_is_unique_sorted_and_uses_strict_threshold(self) -> None:
         features = ["a", "b", "c"]
@@ -158,13 +235,22 @@ class CorrelationAnalysisTests(unittest.TestCase):
         warnings = pd.DataFrame(columns=ca.DATA_QUALITY_WARNING_COLUMNS)
         matrix = pd.DataFrame([[1.0]], index=["a"], columns=["a"])
         pairs = pd.DataFrame(columns=ca.CORRELATION_PAIR_COLUMNS)
+        feature_roles = pd.DataFrame(
+            [{"column": "a", "role": "PF_FEATURE", "reason": ""}]
+        )
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_directory = Path(temporary_directory)
             split = ca.save_correlation_outputs(
-                output_directory, summary, warnings, matrix, pairs
+                output_directory,
+                feature_roles,
+                summary,
+                warnings,
+                matrix,
+                pairs,
             )
             expected_files = {
+                "feature_roles.csv",
                 "feature_summary.csv",
                 "data_quality_warnings.csv",
                 "pearson_correlation_matrix.csv",
@@ -264,30 +350,56 @@ class CorrelationAnalysisTests(unittest.TestCase):
         self.assertIn("PF", report)
         self.assertIn("a: 1 missing (10.00%)", report)
         self.assertIn("Correlation does not imply causation", report)
+        self.assertIn("structural null -> 0.0", report)
+        self.assertIn(
+            "StandardScaler not applied because Pearson correlation is affine-invariant",
+            report,
+        )
         self.assertIn("manual", report.lower())
 
     def test_analyze_scenario_returns_complete_result(self) -> None:
         frame = pd.DataFrame(
             {
-                "a": [0.0, 0.5, 1.0],
-                "b": [0.0, 0.5, 1.0],
+                "Per_extent": [0.0, np.nan, 0.5, 1.0],
+                "PFABC_NOR": [0.0, 0.0, 0.5, 1.0],
+                "TFABC_NOR": [1.0, 0.5, 0.25, 0.0],
+                "PF_Index_Risk_equal": [0.4, 0.5, 0.6, 0.7],
             }
         )
         with tempfile.TemporaryDirectory() as temporary_directory:
-            result = ca.analyze_scenario(
-                frame,
-                "PF",
-                {"group": ["a", "b"]},
-                Path(temporary_directory),
-                threshold=0.6,
-                expected_ranges={"group": (0.0, 1.0)},
-            )
+            with (
+                mock.patch(
+                    "scripts.pearson_correlation.correlation_analysis.StandardScaler",
+                    create=True,
+                    side_effect=AssertionError("correlation must not scale"),
+                ) as scaler,
+                mock.patch.object(ca, "plot_full_heatmap"),
+                mock.patch.object(ca, "plot_high_correlation_heatmap"),
+            ):
+                result = ca.analyze_scenario(
+                    frame,
+                    "PF",
+                    Path(temporary_directory),
+                    threshold=0.6,
+                )
             files = {path.name for path in Path(temporary_directory).iterdir()}
 
-        self.assertEqual(result["features"], ["a", "b"])
+        scaler.assert_not_called()
+        self.assertEqual(result["features"], ["Per_extent", "PFABC_NOR"])
         self.assertEqual(len(result["high_pairs"]), 1)
-        self.assertIn("pearson_correlation_heatmap.png", files)
-        self.assertIn("high_correlation_heatmap.png", files)
+        self.assertEqual(result["pairwise_counts"].loc["Per_extent", "PFABC_NOR"], 4)
+        self.assertEqual(
+            result["filled_features"].loc[1, "Per_extent"],
+            0.0,
+        )
+        self.assertAlmostEqual(
+            result["correlation_matrix"].loc["Per_extent", "PFABC_NOR"],
+            1.0,
+        )
+        per_summary = result["feature_summary"].set_index("feature").loc["Per_extent"]
+        self.assertEqual(per_summary["missing_count"], 1)
+        self.assertEqual(per_summary["filled_zero_count"], 2)
+        self.assertIn("feature_roles.csv", files)
 
 
 if __name__ == "__main__":
