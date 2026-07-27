@@ -27,7 +27,7 @@ from pandas.api.types import is_numeric_dtype
 # ---------------------------------------------------------------------------
 
 PROJECT_DIRECTORY = Path(__file__).resolve().parents[2]
-INPUT_FILE = PROJECT_DIRECTORY / "data" / "MT_UPDATE_MS_HEV_v2_NORcleaned.csv"
+INPUT_FILE = PROJECT_DIRECTORY / "data" / "MT_UPDATE_MS_HEV_v3_NORcleaned.csv"
 OUTPUT_DIRECTORY = PROJECT_DIRECTORY / "outputs_correlation"
 CORRELATION_THRESHOLD = 0.6
 IDENTIFIER_COLUMNS = ("fid", "MS_ID")

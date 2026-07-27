@@ -19,6 +19,7 @@ IDENTIFIER_COLUMNS = ("fid", "MS_ID")
 SCENARIO_CONFIG: Dict[str, Dict[str, object]] = {
     "pf": {
         "default_removals": (
+            "Per_extent",
             "PFAB2k_NOR",
             "PFPRM_lossR",
             "N_PFlossR_2ktw",
@@ -29,6 +30,7 @@ SCENARIO_CONFIG: Dict[str, Dict[str, object]] = {
     },
     "tf": {
         "default_removals": (
+            "Tem_extent",
             "TFAB2k_NOR",
             "TFPRM_lossR",
             "N_TFlossR_2ktw",

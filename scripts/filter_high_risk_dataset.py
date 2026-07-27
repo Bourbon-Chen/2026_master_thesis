@@ -11,7 +11,7 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
-DEFAULT_INPUT = PROJECT_ROOT / "data" / "MT_UPDATE_MS_HEV_v2_NORcleaned.csv"
+DEFAULT_INPUT = PROJECT_ROOT / "data" / "MT_UPDATE_MS_HEV_v3_NORcleaned.csv"
 RISK_COLUMNS = {
     "pf": "PF_Index_Risk_equal",
     "tf": "TF_Index_Risk_equal",

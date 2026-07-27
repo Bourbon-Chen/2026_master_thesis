@@ -8,16 +8,14 @@ from typing import Dict, Sequence
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 PF_FEATURES = (
-    "Per_extent",
     "N_PFlossR_2kiw",
     "N_PFlossR_2kmw",
     "PFResident_lossR",
     "PFDaynight_lossR",
     "PFAB5k_NOR",
     "PFABC_NOR",
-)
+) # 2. 已经删掉"Per_extent"和"Tem_extent"列，再尝试
 TF_FEATURES = (
-    "Tem_extent",
     "N_TFlossR_2kiw",
     "N_TFlossR_2kmw",
     "TFResident_lossR",
@@ -35,6 +33,6 @@ DEFAULT_INPUT_PATHS: Dict[str, Path] = {
 }
 
 SCENARIO_CONFIG: Dict[str, Dict[str, Sequence[str]]] = {
-    "PF": {"features": PF_FEATURES, "metadata": PF_METADATA_COLUMNS},
+    "PF": {"features": PF_FEATURES, "metadata": PF_METADATA_COLUMNS}, # 1. 删掉"Per_extent"和"Tem_extent"列后报错
     "TF": {"features": TF_FEATURES, "metadata": TF_METADATA_COLUMNS},
 }
