@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
+import sys
 from tempfile import TemporaryDirectory
 import unittest
 
@@ -43,6 +45,21 @@ class PrepareClusteringInputsTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
+
+    def test_direct_script_execution_can_import_project_packages(self) -> None:
+        """Removing the project-root bootstrap breaks file-based CLI launches."""
+        script_path = Path(__file__).with_name("prepare_clustering_inputs.py")
+
+        completed = subprocess.run(
+            [sys.executable, str(script_path), "--help"],
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("--input", completed.stdout)
 
     def test_run_preparation_saves_a_loaded_artifact_for_the_input_rows(self) -> None:
         """Removing the delegation or exclusion would change the saved artifact."""
