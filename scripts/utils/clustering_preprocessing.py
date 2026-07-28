@@ -86,6 +86,13 @@ class PreparedArtifact:
 
 PF_PATTERN = re.compile(r"^(?:PF|N_PF|Per_)", re.IGNORECASE)
 TF_PATTERN = re.compile(r"^(?:TF|N_TF|Tem_)", re.IGNORECASE)
+RAW_AB_LOSSR_PATTERN = re.compile(
+    r"^(?:N_)?(?:PF|TF)AB(?:2k|5k)_lossR$",
+    re.IGNORECASE,
+)
+RAW_AB_LOSSR_EXCLUSION_REASON = (
+    "raw_ab_lossR_replaced_by_normalized_NOR"
+)
 IDENTIFIER_NAMES = frozenset({"fid", "ms_id"})
 SHARED_FEATURE_NAMES = frozenset(
     {"street_type_nor", "resident_nor", "daynight_nor", "prm_nor"}
@@ -137,6 +144,13 @@ def normalize_scenario(value: object) -> str:
     raise ValueError("Scenario must be one of PF, TF, 1, or 2")
 
 
+def _builtin_exclusion_reason(name: str) -> str:
+    """Return the stable reason for an intrinsic modelling exclusion."""
+    if RAW_AB_LOSSR_PATTERN.fullmatch(name):
+        return RAW_AB_LOSSR_EXCLUSION_REASON
+    return ""
+
+
 def classify_column(name: str, series: pd.Series) -> FieldRole:
     """Classify a source column using canonical, precedence-ordered rules."""
     normalized_name = name.casefold()
@@ -148,6 +162,8 @@ def classify_column(name: str, series: pd.Series) -> FieldRole:
         return FieldRole.RESULT_OR_LABEL
     if normalized_name in SHARED_FEATURE_NAMES:
         return FieldRole.SHARED_FEATURE
+    if _builtin_exclusion_reason(name):
+        return FieldRole.EXCLUDED
     if PF_PATTERN.match(name):
         return (
             FieldRole.PF_FEATURE
@@ -208,7 +224,7 @@ def discover_scenario_features(
     non_numeric_names = []
     for name in source_columns:
         role = base_roles[name]
-        reason = ""
+        reason = _builtin_exclusion_reason(name)
         is_active_marked_column = (
             canonical_scenario == "PF" and PF_PATTERN.match(name)
         ) or (canonical_scenario == "TF" and TF_PATTERN.match(name))

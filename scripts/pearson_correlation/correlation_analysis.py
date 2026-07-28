@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import math
 from pathlib import Path
+import sys
 from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 import matplotlib
@@ -23,6 +24,11 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
+
+PROJECT_DIRECTORY = Path(__file__).resolve().parents[2]
+if str(PROJECT_DIRECTORY) not in sys.path:
+    sys.path.insert(0, str(PROJECT_DIRECTORY))
+
 from scripts.utils.clustering_preprocessing import (
     prepare_semantic_features,
 )
@@ -32,7 +38,6 @@ from scripts.utils.clustering_preprocessing import (
 # User-editable configuration
 # ---------------------------------------------------------------------------
 
-PROJECT_DIRECTORY = Path(__file__).resolve().parents[2]
 INPUT_FILE = PROJECT_DIRECTORY / "data" / "MT_UPDATE_MS_HEV_v3_NORcleaned.csv"
 OUTPUT_DIRECTORY = PROJECT_DIRECTORY / "outputs_correlation"
 CORRELATION_THRESHOLD = 0.6

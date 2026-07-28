@@ -21,6 +21,18 @@ PLOT_FUNCTIONS = (
     "plot_loading",
     "plot_correlation_circle",
 )
+EXPECTED_MANAGED_FILENAMES = (
+    "pca_summary.csv",
+    "pca_loadings.csv",
+    "pca_scores.csv",
+    "explained_variance.png",
+    "cumulative_variance.png",
+    "pca_scatter.png",
+    "loading_plot.png",
+    "correlation_circle.png",
+    "pca_report.txt",
+    "preprocessing_reference.json",
+)
 
 
 class PcaAnalysisTests(unittest.TestCase):
@@ -56,9 +68,27 @@ class PcaAnalysisTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
-    def patch_plots(self, stack: ExitStack) -> None:
+    def patch_plots(
+        self,
+        stack: ExitStack,
+        failing_function: str | None = None,
+    ) -> None:
+        def write_placeholder_plot(*args: object) -> None:
+            Path(args[-1]).write_bytes(b"test plot")
+
         for function_name in PLOT_FUNCTIONS:
-            stack.enter_context(patch.object(pca, function_name))
+            side_effect: object
+            if function_name == failing_function:
+                side_effect = RuntimeError("simulated PCA output failure")
+            else:
+                side_effect = write_placeholder_plot
+            stack.enter_context(
+                patch.object(
+                    pca,
+                    function_name,
+                    side_effect=side_effect,
+                )
+            )
 
     def test_run_analysis_passes_exact_persisted_matrix_to_pca_without_scaling(
         self,
@@ -133,18 +163,113 @@ class PcaAnalysisTests(unittest.TestCase):
             },
         )
 
-    def test_run_analysis_rejects_an_existing_final_output_directory(self) -> None:
-        """Reusing a scenario directory would overwrite an earlier PCA run."""
+    def test_repeated_run_replaces_managed_outputs_and_preserves_unmanaged_entries(
+        self,
+    ) -> None:
         output_root = self.root / "output_pca"
-        final_directory = output_root / "pf"
-        final_directory.mkdir(parents=True)
-        sentinel = final_directory / "existing.txt"
-        sentinel.write_text("preserve", encoding="utf-8")
+        with ExitStack() as stack:
+            self.patch_plots(stack)
+            output_dir = pca.run_analysis(self.artifact_dir, output_root)
 
-        with self.assertRaisesRegex(FileExistsError, "already exists"):
+        stale_report = output_dir / "pca_report.txt"
+        stale_report.write_text("stale PCA report", encoding="utf-8")
+        sentinel = output_dir / "manual_notes.txt"
+        sentinel.write_text("preserve", encoding="utf-8")
+        manual_directory = output_dir / "manual_review"
+        manual_directory.mkdir()
+        manual_file = manual_directory / "decision.txt"
+        manual_file.write_text("preserve directory", encoding="utf-8")
+
+        with ExitStack() as stack:
+            self.patch_plots(stack)
+            repeated_output_dir = pca.run_analysis(
+                self.artifact_dir,
+                output_root,
+            )
+
+        self.assertEqual(repeated_output_dir, output_root / "pf")
+        self.assertNotEqual(
+            stale_report.read_text(encoding="utf-8"),
+            "stale PCA report",
+        )
+        for filename in EXPECTED_MANAGED_FILENAMES:
+            self.assertTrue((output_dir / filename).is_file(), filename)
+        self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve")
+        self.assertEqual(
+            manual_file.read_text(encoding="utf-8"),
+            "preserve directory",
+        )
+
+    def test_generation_failure_leaves_previous_managed_outputs_unchanged(
+        self,
+    ) -> None:
+        output_root = self.root / "output_pca"
+        with ExitStack() as stack:
+            self.patch_plots(stack)
+            output_dir = pca.run_analysis(self.artifact_dir, output_root)
+        before = {
+            filename: (output_dir / filename).read_bytes()
+            for filename in EXPECTED_MANAGED_FILENAMES
+        }
+
+        with ExitStack() as stack:
+            self.patch_plots(
+                stack,
+                failing_function="plot_cumulative_variance",
+            )
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "simulated PCA output failure",
+            ):
+                pca.run_analysis(self.artifact_dir, output_root)
+
+        after = {
+            filename: (output_dir / filename).read_bytes()
+            for filename in EXPECTED_MANAGED_FILENAMES
+        }
+        self.assertEqual(after, before)
+
+    def test_existing_scenario_path_must_be_a_directory(self) -> None:
+        output_root = self.root / "output_pca"
+        output_root.mkdir()
+        scenario_path = output_root / "pf"
+        scenario_path.write_text("not a directory", encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            NotADirectoryError,
+            "PCA final output path is not a directory",
+        ):
             pca.run_analysis(self.artifact_dir, output_root)
 
-        self.assertEqual(sentinel.read_text(encoding="utf-8"), "preserve")
+        self.assertEqual(
+            scenario_path.read_text(encoding="utf-8"),
+            "not a directory",
+        )
+
+    def test_publish_rejects_an_incomplete_staging_set_before_replacement(
+        self,
+    ) -> None:
+        staging_dir = self.root / "staging"
+        staging_dir.mkdir()
+        output_dir = self.root / "output_pca" / "pf"
+        output_dir.mkdir(parents=True)
+        old_report = output_dir / "pca_report.txt"
+        old_report.write_text("previous report", encoding="utf-8")
+        for filename in EXPECTED_MANAGED_FILENAMES:
+            if filename != "pca_report.txt":
+                (staging_dir / filename).write_bytes(b"new staged output")
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "PCA staging did not produce every managed output",
+        ):
+            pca._publish_pca_outputs(staging_dir, output_dir)
+
+        self.assertEqual(
+            old_report.read_text(encoding="utf-8"),
+            "previous report",
+        )
+        self.assertFalse((output_dir / "pca_summary.csv").exists())
 
     def test_run_pca_preserves_full_component_contract(self) -> None:
         values = self.artifact.standardized_features.to_numpy(dtype=float)

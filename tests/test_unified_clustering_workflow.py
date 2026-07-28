@@ -32,6 +32,12 @@ class UnifiedClusteringWorkflowTests(unittest.TestCase):
                 "Per_extent": [-1.0, -0.6, None, 0.2, 0.6, 1.0],
                 "PFABC_NOR": [-0.8, -0.4, -0.1, 0.3, 0.7, 0.9],
                 "PFResident_lossR": [-0.7, -0.3, 0.0, 0.4, 0.6, 0.8],
+                "PFAB2k_lossR": [-0.9, -0.5, -0.1, 0.2, 0.6, 0.9],
+                "N_PFAB2k_lossR": [-0.8, -0.4, 0.0, 0.3, 0.7, 1.0],
+                "PFAB5k_lossR": [-1.0, -0.6, -0.2, 0.1, 0.5, 0.8],
+                "N_PFAB5k_lossR": [-0.7, -0.3, 0.0, 0.4, 0.8, 0.9],
+                "PFAB2k_NOR": [-0.95, -0.55, -0.15, 0.25, 0.65, 0.95],
+                "PFAB5k_NOR": [-0.85, -0.45, -0.05, 0.35, 0.75, 1.0],
                 "TFABC_NOR": [0.9, 0.7, 0.3, 0.0, -0.4, -0.8],
             }
         )
@@ -98,6 +104,26 @@ class UnifiedClusteringWorkflowTests(unittest.TestCase):
         )
         self.assertEqual(len(kmeans_labels), len(kmeans_input.artifact.metadata))
         self.assertFalse(pd.Series(kmeans_labels).isna().any())
+
+    def test_raw_ab_lossr_never_reaches_any_prepared_consumer(self):
+        artifact = pca_analysis.load_pca_input(self.artifact_dir)
+        raw_names = {
+            "PFAB2k_lossR",
+            "N_PFAB2k_lossR",
+            "PFAB5k_lossR",
+            "N_PFAB5k_lossR",
+        }
+
+        self.assertTrue(raw_names.isdisjoint(artifact.feature_names))
+        self.assertIn("PFAB2k_NOR", artifact.feature_names)
+        self.assertIn("PFAB5k_NOR", artifact.feature_names)
+        excluded = artifact.excluded_features.set_index("column")
+        for name in raw_names:
+            self.assertEqual(excluded.loc[name, "role"], "EXCLUDED")
+            self.assertEqual(
+                excluded.loc[name, "reason"],
+                "raw_ab_lossR_replaced_by_normalized_NOR",
+            )
 
 
 if __name__ == "__main__":

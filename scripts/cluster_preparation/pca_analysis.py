@@ -8,6 +8,7 @@ import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Sequence
 
 import matplotlib
@@ -33,6 +34,18 @@ from scripts.utils.clustering_preprocessing import (
 )
 
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output_pca"
+PCA_MANAGED_FILENAMES = (
+    "pca_summary.csv",
+    "pca_loadings.csv",
+    "pca_scores.csv",
+    "explained_variance.png",
+    "cumulative_variance.png",
+    "pca_scatter.png",
+    "loading_plot.png",
+    "correlation_circle.png",
+    "pca_report.txt",
+    "preprocessing_reference.json",
+)
 
 
 @dataclass
@@ -346,27 +359,74 @@ def write_preprocessing_reference(
     )
 
 
+def _write_pca_outputs(
+    artifact: PreparedArtifact,
+    result: PcaResult,
+    output_dir: Path,
+) -> None:
+    """Generate the complete managed PCA output set in one directory."""
+    save_tables(artifact, result, output_dir)
+    plot_scree(result.summary, output_dir / "explained_variance.png")
+    plot_cumulative_variance(
+        result.summary,
+        output_dir / "cumulative_variance.png",
+    )
+    plot_scatter(result, output_dir / "pca_scatter.png")
+    plot_loading(result, output_dir / "loading_plot.png")
+    plot_correlation_circle(
+        result,
+        output_dir / "correlation_circle.png",
+    )
+    generate_report(artifact, result, output_dir / "pca_report.txt")
+    write_preprocessing_reference(
+        artifact,
+        output_dir / "preprocessing_reference.json",
+    )
+
+
+def _publish_pca_outputs(staging_dir: Path, output_dir: Path) -> None:
+    """Replace only the complete PCA-managed set in the final directory."""
+    missing = [
+        filename
+        for filename in PCA_MANAGED_FILENAMES
+        if not (staging_dir / filename).is_file()
+    ]
+    if missing:
+        raise RuntimeError(
+            "PCA staging did not produce every managed output: "
+            + ", ".join(missing)
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for filename in PCA_MANAGED_FILENAMES:
+        (staging_dir / filename).replace(output_dir / filename)
+
+
 def run_analysis(prepared_path: Path, output_root: Path) -> Path:
     print("Loading prepared artifact...")
     artifact = load_pca_input(prepared_path)
     scenario = str(artifact.config["scenario"])
-    output_dir = Path(output_root) / scenario.lower()
-    if output_dir.exists():
-        raise FileExistsError(f"PCA final output directory already exists: {output_dir}")
+    output_root = Path(output_root)
+    output_dir = output_root / scenario.lower()
+    if output_root.exists() and not output_root.is_dir():
+        raise NotADirectoryError(
+            f"PCA output root is not a directory: {output_root}"
+        )
+    if output_dir.exists() and not output_dir.is_dir():
+        raise NotADirectoryError(
+            f"PCA final output path is not a directory: {output_dir}"
+        )
+    output_root.mkdir(parents=True, exist_ok=True)
     values = artifact.standardized_features.to_numpy(dtype=float, copy=True)
     print("Running PCA...")
     result = run_pca(values, artifact.feature_names)
 
-    save_tables(artifact, result, output_dir)
-    plot_scree(result.summary, output_dir / "explained_variance.png")
-    plot_cumulative_variance(result.summary, output_dir / "cumulative_variance.png")
-    plot_scatter(result, output_dir / "pca_scatter.png")
-    plot_loading(result, output_dir / "loading_plot.png")
-    plot_correlation_circle(result, output_dir / "correlation_circle.png")
-    generate_report(artifact, result, output_dir / "pca_report.txt")
-    write_preprocessing_reference(
-        artifact, output_dir / "preprocessing_reference.json"
-    )
+    with TemporaryDirectory(
+        prefix=f".pca-{scenario.lower()}-",
+        dir=output_root,
+    ) as temporary_directory:
+        staging_dir = Path(temporary_directory)
+        _write_pca_outputs(artifact, result, staging_dir)
+        _publish_pca_outputs(staging_dir, output_dir)
 
     print(f"Number of variables: {len(artifact.feature_names)}")
     print(f"Number of observations: {len(artifact.standardized_features)}")

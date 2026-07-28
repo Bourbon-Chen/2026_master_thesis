@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -16,6 +18,22 @@ from scripts.pearson_correlation import correlation_analysis as ca
 
 class CorrelationAnalysisTests(unittest.TestCase):
     """Verify correlation, quality, reporting, and plotting behavior."""
+
+    def test_direct_script_execution_can_import_project_packages(self) -> None:
+        """Removing the project-root bootstrap breaks file-based CLI launches."""
+        script_path = Path(__file__).with_name("correlation_analysis.py")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            completed = subprocess.run(
+                [sys.executable, str(script_path), "--help"],
+                cwd=temporary_directory,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("--scenario", completed.stdout)
 
     def test_parse_args_accepts_case_insensitive_scenario(self) -> None:
         with mock.patch(
@@ -91,6 +109,28 @@ class CorrelationAnalysisTests(unittest.TestCase):
             feature_groups["population_exposure"], ["PFResident_lossR"]
         )
         self.assertEqual(feature_groups["accessibility"], ["PFABC_NOR"])
+
+    def test_correlation_keeps_normalized_ab_and_excludes_raw_ab_lossr(self):
+        data = pd.DataFrame(
+            {
+                "fid": [1, 2, 3],
+                "MS_ID": ["a", "b", "c"],
+                "PF_Index_Risk_equal": [0.4, 0.5, 0.6],
+                "PFAB2k_lossR": [-0.8, 0.0, 0.8],
+                "N_PFAB2k_lossR": [-0.7, 0.0, 0.7],
+                "PFAB5k_lossR": [-0.6, 0.0, 0.6],
+                "N_PFAB5k_lossR": [-0.5, 0.0, 0.5],
+                "PFAB2k_NOR": [-1.0, 0.0, 1.0],
+                "PFAB5k_NOR": [-0.9, 0.0, 0.9],
+            }
+        )
+
+        _groups, _original, filled = ca.prepare_correlation_features(data, "PF")
+
+        self.assertEqual(
+            tuple(filled.columns),
+            ("PFAB2k_NOR", "PFAB5k_NOR"),
+        )
 
     def test_create_feature_summary_has_required_statistics(self) -> None:
         frame = pd.DataFrame({"a": [1.0, np.nan, 3.0], "b": ["x", None, "y"]})

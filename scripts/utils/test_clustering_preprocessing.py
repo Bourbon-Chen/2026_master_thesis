@@ -57,6 +57,46 @@ class FeatureDiscoveryTests(unittest.TestCase):
                 self.data, "PF", exclusions=("TFABC_NOR",)
             )
 
+    def test_raw_ab_lossr_is_builtin_excluded_but_normalized_ab_is_retained(self):
+        raw_names = (
+            "PFAB2k_lossR",
+            "N_PFAB2k_lossR",
+            "PFAB5k_lossR",
+            "N_PFAB5k_lossR",
+            "TFAB2k_lossR",
+            "N_TFAB2k_lossR",
+            "TFAB5k_lossR",
+            "N_TFAB5k_lossR",
+        )
+        normalized_names = (
+            "PFAB2k_NOR",
+            "PFAB5k_NOR",
+            "TFAB2k_NOR",
+            "TFAB5k_NOR",
+        )
+        data = self.data.copy()
+        for offset, name in enumerate(raw_names + normalized_names):
+            data[name] = [-0.8 + offset * 0.01, 0.0, 0.8 - offset * 0.01]
+        data["PFAB2k_lossR_extra"] = [-0.5, 0.0, 0.5]
+
+        pf = preprocessing.discover_scenario_features(data, "PF")
+        tf = preprocessing.discover_scenario_features(data, "TF")
+        pf_roles = pf.column_roles.set_index("column")
+        tf_roles = tf.column_roles.set_index("column")
+
+        for name in raw_names:
+            self.assertEqual(pf_roles.loc[name, "role"], "EXCLUDED")
+            self.assertEqual(
+                pf_roles.loc[name, "reason"],
+                "raw_ab_lossR_replaced_by_normalized_NOR",
+            )
+            self.assertEqual(tf_roles.loc[name, "role"], "EXCLUDED")
+        self.assertIn("PFAB2k_NOR", pf.feature_names)
+        self.assertIn("PFAB5k_NOR", pf.feature_names)
+        self.assertIn("TFAB2k_NOR", tf.feature_names)
+        self.assertIn("TFAB5k_NOR", tf.feature_names)
+        self.assertIn("PFAB2k_lossR_extra", pf.feature_names)
+
     def test_normalize_scenario_rejects_noncanonical_numeric_values(self):
         with self.assertRaises(ValueError):
             preprocessing.normalize_scenario(True)
