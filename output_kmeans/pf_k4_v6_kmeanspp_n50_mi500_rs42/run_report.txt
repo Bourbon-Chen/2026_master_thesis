@@ -1,36 +1,59 @@
 K-means experiment report
 =========================
 Scenario: PF
-Input CSV: F:\CTH-MPDSD\Year 2-period 2\ACEX35\Codes\rf_demo\outputs_correlation\pf\pf_for_PCA.csv
+Prepared artifact: F:\CTH-MPDSD\Year 2-period 2\ACEX35\Codes\rf_demo\outputs_preprocessing\MT_UPDATE_MS_HEV_v3_NORcleaned_pf_risk_gt_0_25\PF
 Output directory: F:\CTH-MPDSD\Year 2-period 2\ACEX35\Codes\rf_demo\output_kmeans\pf_k4_v6_kmeanspp_n50_mi500_rs42
 K: 4
 Features (6): N_PFlossR_2kiw, N_PFlossR_2kmw, PFResident_lossR, PFDaynight_lossR, PFAB5k_NOR, PFABC_NOR
 
 Sample counts
 - Original: 4100
-- Valid: 2204
-- Removed: 1896
+- Valid: 4100
+- Removed: 0
 
 Excluded columns
-- fid: identifier field
-- MS_ID: identifier field
-- Street_type_NOR: excluded keyword: type
-- Resident_NOR: not in scenario feature configuration
-- DayNight_NOR: not in scenario feature configuration
-- PRM_NOR: not in scenario feature configuration
-- Index_population: excluded keyword: index
-- PF_Index_acc_loss: excluded keyword: index
-- PF_Index_population: excluded keyword: index
-- PFAB2k_lossR: not in scenario feature configuration
-- N_PFAB2k_lossR: not in scenario feature configuration
-- PFAB5k_lossR: not in scenario feature configuration
-- N_PFAB5k_lossR: not in scenario feature configuration
-- PF_Index_centrality: excluded keyword: index
-- PF_Index_V_equal: excluded keyword: index
-- PF_Index_Risk_equal: excluded keyword: index
+- fid: nan
+- MS_ID: nan
+- Per_extent: explicit_research_exclusion
+- Tem_extent: nan
+- Street_type_NOR: nan
+- Resident_NOR: nan
+- DayNight_NOR: nan
+- PRM_NOR: nan
+- Index_population: nan
+- N_PFlossR_2ktw: explicit_research_exclusion
+- PF_Index_acc_loss: nan
+- PFPRM_lossR: explicit_research_exclusion
+- PF_Index_population: nan
+- PFAB2k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- N_PFAB2k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- PFAB2k_NOR: explicit_research_exclusion
+- PFAB5k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- N_PFAB5k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- PF_Index_centrality: nan
+- PF_Index_V_equal: nan
+- N_TFlossR_2kiw: nan
+- N_TFlossR_2ktw: nan
+- N_TFlossR_2kmw: nan
+- TF_Index_acc_loss: nan
+- TFResident_lossR: nan
+- TFDaynight_lossR: nan
+- TFPRM_lossR: nan
+- TF_Index_population: nan
+- TFAB2k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- N_TFAB2k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- TFAB2k_NOR: nan
+- TFAB5k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- N_TFAB5k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- TFAB5k_NOR: nan
+- TFABC_NOR: nan
+- TF_Index_centrality: nan
+- TF_Index_V_equal: nan
+- PF_Index_Risk_equal: nan
+- TF_Index_Risk_equal: nan
 
 Missing-data treatment
-- Policy: Complete-case row removal for active clustering features; no imputation was applied.
+- Policy: Prepared structural nulls retained.
 - N_PFlossR_2kiw: 1342 missing value(s)
 - N_PFlossR_2kmw: 391 missing value(s)
 - PFResident_lossR: 1633 missing value(s)
@@ -38,12 +61,7 @@ Missing-data treatment
 - PFAB5k_NOR: 63 missing value(s)
 
 Data-quality issues
-- missing_values | N_PFlossR_2kiw | count=1342 | removed affected rows: No imputation was applied.
-- missing_values | N_PFlossR_2kmw | count=391 | removed affected rows: No imputation was applied.
-- missing_values | PFResident_lossR | count=1633 | removed affected rows: No imputation was applied.
-- missing_values | PFDaynight_lossR | count=1369 | removed affected rows: No imputation was applied.
-- missing_values | PFAB5k_NOR | count=63 | removed affected rows: No imputation was applied.
-- invalid_rows | (all rows) | count=1896 | excluded from K-means: Rows remain in clustered_data.csv with an empty label.
+- None
 
 Scaling
 The input data had already been standardized with StandardScaler.
@@ -56,39 +74,39 @@ K-means settings
 - random_state: 42
 - algorithm: lloyd
 - tolerance: 0.0001
-- iterations: 5
+- iterations: 19
 - converged: True
-- fit seconds: 6.25689
+- fit seconds: 6.52334
 
 Cluster label ordering
 - Rule: centroid PC1 projection
 
 Cluster membership
-- Cluster 1: 982 samples (44.56%)
-- Cluster 2: 804 samples (36.48%)
-- Cluster 3: 358 samples (16.24%)
-- Cluster 4: 60 samples (2.72%)
+- Cluster 1: 118 samples (2.88%)
+- Cluster 2: 722 samples (17.61%)
+- Cluster 3: 2126 samples (51.85%)
+- Cluster 4: 1134 samples (27.66%)
 
 Model metrics
-- inertia: 374.557
-- silhouette_score: 0.388886
-- calinski_harabasz_score: 1708.45
-- davies_bouldin_score: 0.905311
+- inertia: 13428
+- silhouette_score: 0.304215
+- calinski_harabasz_score: 1135.96
+- davies_bouldin_score: 1.39979
 
 PCA explained variance
-- PC1: 54.2944%
-- PC2: 17.0927%
-- PC1 + PC2: 71.3872%
+- PC1: 31.7167%
+- PC2: 20.6936%
+- PC1 + PC2: 52.4103%
 
-Persisted staging-complete runtime: 9.903 seconds
+Persisted staging-complete runtime: 8.352 seconds
 Runtime scope: start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication
 End-to-end runtime, including the final metadata rewrite and atomic publication, is printed in the terminal.
 
 Timestamps
-- Started: 2026-07-27T00:34:42+02:00
-- Artifact snapshot: 2026-07-27T00:34:52+02:00
+- Started: 2026-07-28T17:41:05+02:00
+- Artifact snapshot: 2026-07-28T17:41:13+02:00
 - Snapshot scope: start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication
-- Execution timestamp: 2026-07-27T00:34:52+02:00
+- Execution timestamp: 2026-07-28T17:41:13+02:00
 
 Software versions
 - Python: 3.11.14
@@ -111,11 +129,12 @@ Output files
 - clustered_data.csv
 - cluster_summary.csv
 - cluster_centroids_standardized.csv
+- cluster_centroids_original_scale.csv
 - cluster_feature_profile.csv
 - sample_distances.csv
 - model_metrics.csv
 - cluster_label_mapping.csv
-- data_quality_issues.csv
+- preprocessing_audit.csv
 - run_config.json
 - run_report.txt
 - pca_cluster_scatter.png

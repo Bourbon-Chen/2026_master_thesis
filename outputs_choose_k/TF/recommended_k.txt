@@ -10,3 +10,9 @@ Metric-specific best K:
 
 Recommended K: 2
 3 out of four evaluation metrics suggest K=2.
+
+Candidate cluster-size diagnostics:
+  - Minimum candidate cluster size: 299
+  - Maximum candidate cluster size: 10909
+
+The final K remains a documented research choice, informed by these diagnostics and substantive interpretation.

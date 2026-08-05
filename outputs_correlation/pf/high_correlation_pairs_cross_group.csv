@@ -1,4 +1,6 @@
 ﻿scenario,feature_1,group_1,feature_2,group_2,pearson_r,absolute_r,pairwise_n,same_group,correlation_direction,threshold_exceeded
-PF,Per_extent,flood_exposure,N_PFlossR_2ktw,accessibility_loss,0.7278331059665535,0.7278331059665535,4082,False,positive,True
-PF,Per_extent,flood_exposure,N_PFlossR_2kmw,accessibility_loss,0.6775328157359923,0.6775328157359923,3709,False,positive,True
-PF,Per_extent,flood_exposure,N_PFlossR_2kiw,accessibility_loss,0.619045790686213,0.619045790686213,2758,False,positive,True
+PF,PFAB2k_NOR,other_scenario_indicator,PFAB5k_NOR,accessibility,0.7827696259120831,0.7827696259120831,4100,False,positive,True
+PF,Per_extent,extent,N_PFlossR_2ktw,network_loss,0.7188059259511519,0.7188059259511519,4100,False,positive,True
+PF,Per_extent,extent,N_PFlossR_2kmw,network_loss,0.6156150578004611,0.6156150578004611,4100,False,positive,True
+PF,PFResident_lossR,population_exposure,PFPRM_lossR,other_scenario_indicator,0.6118540691333311,0.6118540691333311,4100,False,positive,True
+PF,PFDaynight_lossR,population_exposure,PFPRM_lossR,other_scenario_indicator,0.6006820621669169,0.6006820621669169,4100,False,positive,True

@@ -1,0 +1,183 @@
+{
+  "artifact_sha256": {
+    "excluded_features.csv": "f4df3461f44633d9897593d2d27a6a0248e268f61343f272342287647d87a8f3",
+    "features_filled.csv": "a191d0f6d68c865dc123ec8208a3c816db506dfc7f533ada36c4ed46565edf91",
+    "features_original.csv": "e5ca8de54b56ef9f5a3aed51b781901936c8487e91e8054583e540562760226f",
+    "features_standardized.csv": "8bd547e5fa46cc311df379ac346a57e8eefd2256725a7aa908ea91cfeb83ad23",
+    "metadata.csv": "8a342541c884bfd163f4d81458f9266f5251ce5a18432929c52493e8dc72c638",
+    "preprocessing_audit.csv": "91ac7a4b441b902eb6d967f255e7ac9b011e9320471144d4c482efad8155ceed",
+    "scaler_parameters.csv": "ff2dcf512718aed2001be5f9dbdd6c7f9d7b588f86710e041cfb43deb86f8244",
+    "selected_features.csv": "83dcb27b58fc116ac5578f9afd345fed7d595cd06e5b9513d37d9bcb63c6d0a2"
+  },
+  "created_at_utc": "2026-07-28T13:36:57.304349Z",
+  "exclusion_path": null,
+  "exclusion_sha256": null,
+  "feature_order": [
+    "Tem_extent",
+    "N_TFlossR_2kiw",
+    "N_TFlossR_2ktw",
+    "N_TFlossR_2kmw",
+    "TFResident_lossR",
+    "TFDaynight_lossR",
+    "TFPRM_lossR",
+    "TFAB2k_NOR",
+    "TFAB5k_NOR",
+    "TFABC_NOR"
+  ],
+  "feature_order_sha256": "48f529766f01afb8d7a23775c5c27155147fdfebac0cee0c7f951ee5b5c4cb2d",
+  "marker_rules": {
+    "PF": [
+      "^PF",
+      "^N_PF",
+      "^Per_"
+    ],
+    "TF": [
+      "^TF",
+      "^N_TF",
+      "^Tem_"
+    ],
+    "anchored": true,
+    "case_sensitive": false
+  },
+  "matrix_sha256": "8bd547e5fa46cc311df379ac346a57e8eefd2256725a7aa908ea91cfeb83ad23",
+  "risk_filter": {
+    "column": "TF_Index_Risk_equal",
+    "operator": ">",
+    "threshold": 0.25
+  },
+  "scaler": {
+    "class": "sklearn.preprocessing.StandardScaler",
+    "parameters": {
+      "copy": true,
+      "with_mean": true,
+      "with_std": true
+    },
+    "statistics": [
+      {
+        "feature": "Tem_extent",
+        "filled_max": 1.0,
+        "filled_min": 0.0,
+        "mean": 0.20906949352179033,
+        "original_max": 1.0,
+        "original_min": 0.0,
+        "original_null_count": 0,
+        "scale": 0.4066441200857728,
+        "variance": 0.16535944040033237
+      },
+      {
+        "feature": "N_TFlossR_2kiw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.23090709093835876,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 4256,
+        "scale": 0.6454429143202796,
+        "variance": 0.4165965556462557
+      },
+      {
+        "feature": "N_TFlossR_2ktw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.20576932718431099,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 7,
+        "scale": 0.6326962441687136,
+        "variance": 0.40030453738519645
+      },
+      {
+        "feature": "N_TFlossR_2kmw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.34361531657635425,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 357,
+        "scale": 0.7009566847549631,
+        "variance": 0.4913402739026687
+      },
+      {
+        "feature": "TFResident_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.18772119217875738,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 5595,
+        "scale": 0.36726016886390195,
+        "variance": 0.13488003163394177
+      },
+      {
+        "feature": "TFDaynight_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.22993235335813703,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 4919,
+        "scale": 0.39031171356320493,
+        "variance": 0.1523432337446453
+      },
+      {
+        "feature": "TFPRM_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.18745248518389238,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 5916,
+        "scale": 0.3691764206905984,
+        "variance": 0.1362912295939217
+      },
+      {
+        "feature": "TFAB2k_NOR",
+        "filled_max": 1.0,
+        "filled_min": 0.0,
+        "mean": 0.6276971791055881,
+        "original_max": 1.0,
+        "original_min": 0.0,
+        "original_null_count": 439,
+        "scale": 0.3442438905733849,
+        "variance": 0.1185038561971006
+      },
+      {
+        "feature": "TFAB5k_NOR",
+        "filled_max": 1.0,
+        "filled_min": 0.0,
+        "mean": 0.7724579651973192,
+        "original_max": 1.0,
+        "original_min": 0.0,
+        "original_null_count": 439,
+        "scale": 0.26755948002328267,
+        "variance": 0.0715880753503294
+      },
+      {
+        "feature": "TFABC_NOR",
+        "filled_max": 0.838900276696294,
+        "filled_min": 0.0,
+        "mean": 0.0881495247383696,
+        "original_max": 0.838900276696294,
+        "original_min": 0.0,
+        "original_null_count": 0,
+        "scale": 0.11562944729818445,
+        "variance": 0.013370169082483613
+      }
+    ]
+  },
+  "scenario": "TF",
+  "source_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\data\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25.csv",
+  "source_row_count": 13584,
+  "source_sha256": "59556c212befec4e1f0fe602334c43d5ba910cba667ec64ee3d6a46cd7d161bf",
+  "structural_null": {
+    "fill_value": 0.0,
+    "semantic_meaning": "no measurable change",
+    "strategy": "fill_with_constant"
+  },
+  "versions": {
+    "numpy": "2.3.3",
+    "pandas": "2.3.3",
+    "python": "3.11.14",
+    "scikit_learn": "1.7.2"
+  }
+}

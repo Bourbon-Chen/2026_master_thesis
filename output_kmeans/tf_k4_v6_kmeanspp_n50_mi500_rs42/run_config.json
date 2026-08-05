@@ -1,6 +1,6 @@
 {
   "scenario": "TF",
-  "input_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_correlation\\tf\\tf_for_PCA.csv",
+  "input_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25\\TF",
   "output_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\output_kmeans\\tf_k4_v6_kmeanspp_n50_mi500_rs42",
   "k": 4,
   "feature_list": [
@@ -11,120 +11,194 @@
     "TFAB5k_NOR",
     "TFABC_NOR"
   ],
+  "preprocessing_reference": {
+    "manifest_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25\\TF\\preprocessing_config.json",
+    "manifest_sha256": "2091520420c33b80e6c3801a28bffbbb53b63b86949369c99f7c92e0958d42f9",
+    "matrix_sha256": "dad01e4e91f9db5a7da19c7341af96535f34276c4e602fa419db6db6ebd5f842",
+    "source_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\data\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25.csv",
+    "source_sha256": "59556c212befec4e1f0fe602334c43d5ba910cba667ec64ee3d6a46cd7d161bf",
+    "scenario": "TF",
+    "row_count": 13584,
+    "feature_names": [
+      "N_TFlossR_2kiw",
+      "N_TFlossR_2kmw",
+      "TFResident_lossR",
+      "TFDaynight_lossR",
+      "TFAB5k_NOR",
+      "TFABC_NOR"
+    ],
+    "feature_count": 6,
+    "structural_null_row_count": 7556,
+    "structural_null_value_count": 15566,
+    "rows_excluded_for_null": 0
+  },
   "excluded_columns": [
     {
       "column": "fid",
-      "reason": "identifier field"
+      "reason": NaN
     },
     {
       "column": "MS_ID",
-      "reason": "identifier field"
+      "reason": NaN
+    },
+    {
+      "column": "Per_extent",
+      "reason": NaN
+    },
+    {
+      "column": "Tem_extent",
+      "reason": "explicit_research_exclusion"
     },
     {
       "column": "Street_type_NOR",
-      "reason": "excluded keyword: type"
+      "reason": NaN
     },
     {
       "column": "Resident_NOR",
-      "reason": "not in scenario feature configuration"
+      "reason": NaN
     },
     {
       "column": "DayNight_NOR",
-      "reason": "not in scenario feature configuration"
+      "reason": NaN
     },
     {
       "column": "PRM_NOR",
-      "reason": "not in scenario feature configuration"
+      "reason": NaN
     },
     {
       "column": "Index_population",
-      "reason": "excluded keyword: index"
+      "reason": NaN
+    },
+    {
+      "column": "N_PFlossR_2kiw",
+      "reason": NaN
+    },
+    {
+      "column": "N_PFlossR_2ktw",
+      "reason": NaN
+    },
+    {
+      "column": "N_PFlossR_2kmw",
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_acc_loss",
+      "reason": NaN
+    },
+    {
+      "column": "PFResident_lossR",
+      "reason": NaN
+    },
+    {
+      "column": "PFDaynight_lossR",
+      "reason": NaN
+    },
+    {
+      "column": "PFPRM_lossR",
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_population",
+      "reason": NaN
+    },
+    {
+      "column": "PFAB2k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "N_PFAB2k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "PFAB2k_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "PFAB5k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "N_PFAB5k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "PFAB5k_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "PFABC_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_centrality",
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_V_equal",
+      "reason": NaN
+    },
+    {
+      "column": "N_TFlossR_2ktw",
+      "reason": "explicit_research_exclusion"
     },
     {
       "column": "TF_Index_acc_loss",
-      "reason": "excluded keyword: index"
+      "reason": NaN
+    },
+    {
+      "column": "TFPRM_lossR",
+      "reason": "explicit_research_exclusion"
     },
     {
       "column": "TF_Index_population",
-      "reason": "excluded keyword: index"
+      "reason": NaN
     },
     {
       "column": "TFAB2k_lossR",
-      "reason": "not in scenario feature configuration"
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
     },
     {
       "column": "N_TFAB2k_lossR",
-      "reason": "not in scenario feature configuration"
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "TFAB2k_NOR",
+      "reason": "explicit_research_exclusion"
     },
     {
       "column": "TFAB5k_lossR",
-      "reason": "not in scenario feature configuration"
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
     },
     {
       "column": "N_TFAB5k_lossR",
-      "reason": "not in scenario feature configuration"
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
     },
     {
       "column": "TF_Index_centrality",
-      "reason": "excluded keyword: index"
+      "reason": NaN
     },
     {
       "column": "TF_Index_V_equal",
-      "reason": "excluded keyword: index"
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_Risk_equal",
+      "reason": NaN
     },
     {
       "column": "TF_Index_Risk_equal",
-      "reason": "excluded keyword: index"
+      "reason": NaN
     }
   ],
   "id_columns": [
     "fid",
-    "MS_ID"
+    "MS_ID",
+    "TF_Index_Risk_equal",
+    "source_row_position",
+    "structural_null_count",
+    "had_structural_null"
   ],
-  "data_quality_issues": [
-    {
-      "issue_type": "missing_values",
-      "column": "N_TFlossR_2kiw",
-      "count": 4256,
-      "action": "removed affected rows",
-      "details": "No imputation was applied."
-    },
-    {
-      "issue_type": "missing_values",
-      "column": "N_TFlossR_2kmw",
-      "count": 357,
-      "action": "removed affected rows",
-      "details": "No imputation was applied."
-    },
-    {
-      "issue_type": "missing_values",
-      "column": "TFResident_lossR",
-      "count": 5595,
-      "action": "removed affected rows",
-      "details": "No imputation was applied."
-    },
-    {
-      "issue_type": "missing_values",
-      "column": "TFDaynight_lossR",
-      "count": 4919,
-      "action": "removed affected rows",
-      "details": "No imputation was applied."
-    },
-    {
-      "issue_type": "missing_values",
-      "column": "TFAB5k_NOR",
-      "count": 439,
-      "action": "removed affected rows",
-      "details": "No imputation was applied."
-    },
-    {
-      "issue_type": "invalid_rows",
-      "column": "",
-      "count": 7556,
-      "action": "excluded from K-means",
-      "details": "Rows remain in clustered_data.csv with an empty label."
-    }
-  ],
+  "data_quality_issues": [],
   "standard_scaler_applied": false,
   "scaling_transformations_applied": [],
   "kmeans_parameters": {
@@ -141,8 +215,8 @@
   },
   "sample_counts": {
     "original": 13584,
-    "valid": 6028,
-    "removed": 7556
+    "valid": 13584,
+    "removed": 0
   },
   "missing_counts": {
     "N_TFlossR_2kiw": 4256,
@@ -151,21 +225,21 @@
     "TFDaynight_lossR": 4919,
     "TFAB5k_NOR": 439
   },
-  "missing_value_policy": "Complete-case row removal for active clustering features; no imputation was applied.",
+  "missing_value_policy": "Prepared structural nulls retained.",
   "cluster_label_ordering": "centroid PC1 projection",
   "pca_explained_variance_percent": {
-    "pc1": 77.93538827352117,
-    "pc2": 10.64191995072618,
-    "pc1_plus_pc2": 88.57730822424735
+    "pc1": 50.252665921851516,
+    "pc2": 17.236346091213058,
+    "pc1_plus_pc2": 67.48901201306458
   },
   "model_fit": {
-    "inertia": 1174.089167074689,
-    "n_iter": 5,
+    "inertia": 34204.824437279305,
+    "n_iter": 13,
     "converged": true,
-    "fit_seconds": 6.219156900013331
+    "fit_seconds": 6.101091699994868
   },
   "runtime": {
-    "runtime_seconds": 9.352653999987524,
+    "runtime_seconds": 9.934460000004037,
     "runtime_scope": "start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication"
   },
   "versions": {
@@ -175,10 +249,10 @@
     "scikit_learn": "1.7.2"
   },
   "timestamps": {
-    "started_at": "2026-07-27T00:35:06+02:00",
-    "ended_at": "2026-07-27T00:35:15+02:00",
+    "started_at": "2026-07-28T17:43:59+02:00",
+    "ended_at": "2026-07-28T17:44:08+02:00",
     "ended_at_scope": "start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication",
-    "execution_timestamp": "2026-07-27T00:35:15+02:00"
+    "execution_timestamp": "2026-07-28T17:44:08+02:00"
   },
   "warnings": [
     "\nFound Intel OpenMP ('libiomp') and LLVM OpenMP ('libomp') loaded at\nthe same time. Both libraries are known to be incompatible and this\ncan cause random crashes or deadlocks on Linux when loaded in the\nsame Python program.\nUsing threadpoolctl may cause crashes or deadlocks. For more\ninformation and possible workarounds, please see\n    https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md\n"

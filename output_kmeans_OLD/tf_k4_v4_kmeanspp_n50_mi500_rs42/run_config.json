@@ -1,0 +1,192 @@
+{
+  "scenario": "TF",
+  "input_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_correlation\\tf\\tf_for_PCA.csv",
+  "output_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\output_kmeans\\tf_k4_v4_kmeanspp_n50_mi500_rs42",
+  "k": 4,
+  "feature_list": [
+    "N_TFlossR_2kiw",
+    "TFDaynight_lossR",
+    "TFAB5k_NOR",
+    "TFABC_NOR"
+  ],
+  "excluded_columns": [
+    {
+      "column": "fid",
+      "reason": "identifier field"
+    },
+    {
+      "column": "MS_ID",
+      "reason": "identifier field"
+    },
+    {
+      "column": "Tem_extent",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "Street_type_NOR",
+      "reason": "excluded keyword: type"
+    },
+    {
+      "column": "Resident_NOR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "DayNight_NOR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "PRM_NOR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "Index_population",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "N_TFlossR_2ktw",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "TF_Index_acc_loss",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "TFPRM_lossR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "TF_Index_population",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "TFAB2k_lossR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "N_TFAB2k_lossR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "TFAB2k_NOR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "TFAB5k_lossR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "N_TFAB5k_lossR",
+      "reason": "not in scenario feature configuration"
+    },
+    {
+      "column": "TF_Index_centrality",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "TF_Index_V_equal",
+      "reason": "excluded keyword: index"
+    },
+    {
+      "column": "TF_Index_Risk_equal",
+      "reason": "excluded keyword: index"
+    }
+  ],
+  "id_columns": [
+    "fid",
+    "MS_ID"
+  ],
+  "data_quality_issues": [
+    {
+      "issue_type": "missing_values",
+      "column": "N_TFlossR_2kiw",
+      "count": 4256,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "missing_values",
+      "column": "TFDaynight_lossR",
+      "count": 4919,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "missing_values",
+      "column": "TFAB5k_NOR",
+      "count": 439,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "missing_values",
+      "column": "TFABC_NOR",
+      "count": 2686,
+      "action": "removed affected rows",
+      "details": "No imputation was applied."
+    },
+    {
+      "issue_type": "invalid_rows",
+      "column": "",
+      "count": 8402,
+      "action": "excluded from K-means",
+      "details": "Rows remain in clustered_data.csv with an empty label."
+    }
+  ],
+  "standard_scaler_applied": false,
+  "scaling_transformations_applied": [],
+  "kmeans_parameters": {
+    "init": "k-means++",
+    "n_init": 50,
+    "max_iter": 500,
+    "random_state": 42,
+    "algorithm": "lloyd",
+    "tol": 0.0001
+  },
+  "metric_parameters": {
+    "silhouette_sample_size": null,
+    "silhouette_working_memory_mb": 256
+  },
+  "sample_counts": {
+    "original": 13584,
+    "valid": 5182,
+    "removed": 8402
+  },
+  "missing_counts": {
+    "N_TFlossR_2kiw": 4256,
+    "TFDaynight_lossR": 4919,
+    "TFAB5k_NOR": 439,
+    "TFABC_NOR": 2686
+  },
+  "missing_value_policy": "Complete-case row removal for active clustering features; no imputation was applied.",
+  "cluster_label_ordering": "centroid PC1 projection",
+  "pca_explained_variance_percent": {
+    "pc1": 57.75264400813621,
+    "pc2": 29.98304407391631,
+    "pc1_plus_pc2": 87.73568808205252
+  },
+  "model_fit": {
+    "inertia": 441.99365725074273,
+    "n_iter": 5,
+    "converged": true,
+    "fit_seconds": 6.608818799999426
+  },
+  "runtime": {
+    "runtime_seconds": 9.621373900001345,
+    "runtime_scope": "start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication"
+  },
+  "versions": {
+    "python": "3.11.14",
+    "pandas": "2.3.3",
+    "numpy": "2.3.3",
+    "scikit_learn": "1.7.2"
+  },
+  "timestamps": {
+    "started_at": "2026-07-27T19:58:46+02:00",
+    "ended_at": "2026-07-27T19:58:55+02:00",
+    "ended_at_scope": "start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication",
+    "execution_timestamp": "2026-07-27T19:58:55+02:00"
+  },
+  "warnings": [
+    "\nFound Intel OpenMP ('libiomp') and LLVM OpenMP ('libomp') loaded at\nthe same time. Both libraries are known to be incompatible and this\ncan cause random crashes or deadlocks on Linux when loaded in the\nsame Python program.\nUsing threadpoolctl may cause crashes or deadlocks. For more\ninformation and possible workarounds, please see\n    https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md\n"
+  ]
+}

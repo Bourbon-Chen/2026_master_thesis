@@ -1,0 +1,135 @@
+{
+  "artifact_sha256": {
+    "excluded_features.csv": "61409770663a591c23f306c1b2b3d37ff6981b4507e958604d6b04c2d7491e1d",
+    "features_filled.csv": "2d5966c31556536bb20ac7ef1538912d007785bcc223be9400c459473a1f128d",
+    "features_original.csv": "da629e1aa8d74524beb7ca848c773bd2de9f51a28e7f41591a5198baf34840a9",
+    "features_standardized.csv": "dad01e4e91f9db5a7da19c7341af96535f34276c4e602fa419db6db6ebd5f842",
+    "metadata.csv": "adedc3cd261392bee274f2296388e03edc159f73cc37cff0b1d5a58dfd8c34da",
+    "preprocessing_audit.csv": "91ac7a4b441b902eb6d967f255e7ac9b011e9320471144d4c482efad8155ceed",
+    "scaler_parameters.csv": "f0fb49b1bacfd6b1ba77d487390f2b533479fdf6228dd57051a3fc3d862be9f4",
+    "selected_features.csv": "24cbea82eef317e24058a932562c92e2002f481ace79f9b0ef7f5fa8214f25c5"
+  },
+  "created_at_utc": "2026-07-28T15:11:06.005979Z",
+  "exclusion_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_correlation\\tf\\feature_exclusions.json",
+  "exclusion_sha256": "e533622ee06c3e4d8437e63e9d73e112a457a14ffbe82e8907b7848e54e9a353",
+  "feature_order": [
+    "N_TFlossR_2kiw",
+    "N_TFlossR_2kmw",
+    "TFResident_lossR",
+    "TFDaynight_lossR",
+    "TFAB5k_NOR",
+    "TFABC_NOR"
+  ],
+  "feature_order_sha256": "1cad08ae3fe3eb5f998a0f16e1398f549314bded54dc95b30136c2cf1d7e2ce5",
+  "marker_rules": {
+    "PF": [
+      "^PF",
+      "^N_PF",
+      "^Per_"
+    ],
+    "TF": [
+      "^TF",
+      "^N_TF",
+      "^Tem_"
+    ],
+    "anchored": true,
+    "case_sensitive": false
+  },
+  "matrix_sha256": "dad01e4e91f9db5a7da19c7341af96535f34276c4e602fa419db6db6ebd5f842",
+  "risk_filter": {
+    "column": "TF_Index_Risk_equal",
+    "operator": ">",
+    "threshold": 0.25
+  },
+  "scaler": {
+    "class": "sklearn.preprocessing.StandardScaler",
+    "parameters": {
+      "copy": true,
+      "with_mean": true,
+      "with_std": true
+    },
+    "statistics": [
+      {
+        "feature": "N_TFlossR_2kiw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.23090709093835876,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 4256,
+        "scale": 0.6454429143202796,
+        "variance": 0.4165965556462557
+      },
+      {
+        "feature": "N_TFlossR_2kmw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.34361531657635425,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 357,
+        "scale": 0.7009566847549631,
+        "variance": 0.4913402739026687
+      },
+      {
+        "feature": "TFResident_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.18772119217875738,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 5595,
+        "scale": 0.36726016886390195,
+        "variance": 0.13488003163394177
+      },
+      {
+        "feature": "TFDaynight_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.22993235335813703,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 4919,
+        "scale": 0.39031171356320493,
+        "variance": 0.1523432337446453
+      },
+      {
+        "feature": "TFAB5k_NOR",
+        "filled_max": 1.0,
+        "filled_min": 0.0,
+        "mean": 0.7724579651973192,
+        "original_max": 1.0,
+        "original_min": 0.0,
+        "original_null_count": 439,
+        "scale": 0.26755948002328267,
+        "variance": 0.0715880753503294
+      },
+      {
+        "feature": "TFABC_NOR",
+        "filled_max": 0.838900276696294,
+        "filled_min": 0.0,
+        "mean": 0.0881495247383696,
+        "original_max": 0.838900276696294,
+        "original_min": 0.0,
+        "original_null_count": 0,
+        "scale": 0.11562944729818445,
+        "variance": 0.013370169082483613
+      }
+    ]
+  },
+  "scenario": "TF",
+  "source_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\data\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25.csv",
+  "source_row_count": 13584,
+  "source_sha256": "59556c212befec4e1f0fe602334c43d5ba910cba667ec64ee3d6a46cd7d161bf",
+  "structural_null": {
+    "fill_value": 0.0,
+    "semantic_meaning": "no measurable change",
+    "strategy": "fill_with_constant"
+  },
+  "versions": {
+    "numpy": "2.3.3",
+    "pandas": "2.3.3",
+    "python": "3.11.14",
+    "scikit_learn": "1.7.2"
+  }
+}
