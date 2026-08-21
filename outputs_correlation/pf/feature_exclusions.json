@@ -1,0 +1,10 @@
+{
+  "scenario": "PF",
+  "excluded_features": [
+    "Per_extent",
+    "PFAB2k_NOR",
+    "PFPRM_lossR",
+    "N_PFlossR_2ktw"
+  ],
+  "reason": "User-selected exclusions after Pearson correlation review"
+}

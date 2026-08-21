@@ -10,7 +10,7 @@ CONDA_ENVIRONMENT = "2026master"
 SCENARIOS = ("PF", "TF")
 METRIC = "euclidean"
 CLUSTER_SELECTION_METHOD = "eom"
-MISSING_VALUE_STRATEGY = "fill_zero"
+STRUCTURAL_NULL_POLICY = "structural_zero_from_prepared_artifact"
 
 SCRIPT_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = SCRIPT_ROOT.parent

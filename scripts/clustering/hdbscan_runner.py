@@ -1,11 +1,13 @@
-"""Shared execution logic for independent Version A and Version B runners."""
+"""Run HDBSCAN against one verified prepared clustering artifact."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -15,29 +17,25 @@ SCRIPT_ROOT = Path(__file__).resolve().parents[1]
 if str(SCRIPT_ROOT) not in sys.path:
     sys.path.insert(0, str(SCRIPT_ROOT))
 
+from utils.clustering_preprocessing import (  # noqa: E402
+    PreparedArtifact,
+    load_prepared_artifact,
+)
 from utils.config import (  # noqa: E402
     CLUSTER_SELECTION_METHOD,
     CONDA_ENVIRONMENT,
-    INPUT_CSV,
     METRIC,
-    MISSING_VALUE_STRATEGY,
     PIPELINE_ROOT,
-    SCENARIOS,
+    STRUCTURAL_NULL_POLICY,
     dataset_name_from_input,
     tables_root,
 )
-from utils.feature_utils import prepare_features, save_feature_audit  # noqa: E402
 from utils.io_utils import (  # noqa: E402
-    build_label_table,
     ensure_pipeline_dirs,
     python_runtime_metadata,
-    prompt_input_path,
-    read_last_version_a_config,
     resolve_dataset_output_root,
-    resolve_input_path,
     sha256_file,
     utc_now_iso,
-    write_last_version_a_config,
     write_json,
 )
 from utils.logging_utils import (  # noqa: E402
@@ -47,29 +45,48 @@ from utils.logging_utils import (  # noqa: E402
 )
 
 
+@dataclass(frozen=True)
+class HdbscanInput:
+    """The immutable matrix and provenance selected for one HDBSCAN version."""
+
+    artifact: PreparedArtifact
+    values: np.ndarray
+    scale_label: str
+
+
+def load_hdbscan_input(path: Path, version: str) -> HdbscanInput:
+    """Load a prepared matrix without feature discovery or transformation."""
+    artifact = load_prepared_artifact(path)
+    if version == "version_b":
+        frame = artifact.standardized_features
+        label = "standardized_primary"
+    elif version == "version_a":
+        frame = artifact.filled_features
+        label = "filled_raw_scale_sensitivity"
+    else:
+        raise ValueError(f"Unsupported HDBSCAN version: {version}")
+    return HdbscanInput(artifact, frame.to_numpy(dtype=float, copy=True), label)
+
+
 def parse_args(versions: tuple[str, ...]) -> argparse.Namespace:
     version_text = ", ".join(versions)
     parser = argparse.ArgumentParser(
-        description=f"Run modular unsupervised HDBSCAN clustering for {version_text}."
+        description=(
+            "Run modular HDBSCAN on a verified prepared artifact for "
+            f"{version_text}."
+        )
     )
     parser.add_argument(
-        "--scenario",
-        nargs="+",
-        choices=SCENARIOS,
-        default=list(SCENARIOS),
-        help="Scenarios to run (default: PF TF).",
+        "--prepared",
+        type=Path,
+        required=True,
+        help="Directory containing the immutable prepared clustering artifact.",
     )
     parser.add_argument(
-        "--input",
+        "--output-root",
         type=Path,
         default=None,
-        help="Input CSV. Prompted interactively when omitted.",
-    )
-    parser.add_argument(
-        "--pipeline-root",
-        type=Path,
-        default=PIPELINE_ROOT,
-        help=f"Pipeline root directory (default: {PIPELINE_ROOT}).",
+        help="Pipeline dataset output root (default: derived from artifact source).",
     )
     parser.add_argument(
         "--min-cluster-size",
@@ -84,12 +101,7 @@ def parse_args(versions: tuple[str, ...]) -> argparse.Namespace:
     parser.add_argument(
         "--audit-only",
         action="store_true",
-        help="Save feature audits without importing sklearn or running HDBSCAN.",
-    )
-    parser.add_argument(
-        "--overwrite",
-        action="store_true",
-        help="Recompute completed runs in pipeline_v1. Historical legacy outputs remain untouched.",
+        help="Write prepared-artifact audits without importing or fitting HDBSCAN.",
     )
     return parser.parse_args()
 
@@ -119,41 +131,6 @@ def resolve_hdbscan_parameters(args: argparse.Namespace) -> tuple[int, int]:
     return min_cluster_size, min_samples
 
 
-def resolve_run_config(
-    args: argparse.Namespace, versions: tuple[str, ...]
-) -> tuple[Path, Path, list[str], int, int, dict | None]:
-    input_path = (
-        resolve_input_path(args.input)
-        if args.input is not None
-        else prompt_input_path(INPUT_CSV)
-    )
-    pipeline_root = args.pipeline_root.resolve()
-    output_root = resolve_dataset_output_root(input_path, pipeline_root)
-    if versions == ("version_b",):
-        config = read_last_version_a_config(output_root)
-        input_path = resolve_input_path(Path(config["input_file"]))
-        if resolve_dataset_output_root(input_path, pipeline_root) != output_root:
-            raise ValueError("Last Version A config points to a different dataset root.")
-        scenarios = config["scenarios"]
-        min_cluster_size = int(config["min_cluster_size"])
-        min_samples = int(config["min_samples"])
-        print("Using last Version A configuration:")
-        print(f"dataset_name: {config['dataset_name']}")
-        print(f"input_file: {config['input_file']}")
-        print(f"scenarios: {' '.join(scenarios)}")
-        print(f"min_cluster_size: {min_cluster_size}")
-        print(f"min_samples: {min_samples}")
-        print(f"metric: {config['metric']}")
-        print(f"selection: {config['cluster_selection_method']}")
-        return input_path, output_root, scenarios, min_cluster_size, min_samples, config
-
-    scenarios = list(args.scenario)
-    if args.audit_only:
-        return input_path, output_root, scenarios, 0, 0, None
-    min_cluster_size, min_samples = resolve_hdbscan_parameters(args)
-    return input_path, output_root, scenarios, min_cluster_size, min_samples, None
-
-
 def check_conda_environment() -> None:
     active_environment = os.environ.get("CONDA_DEFAULT_ENV")
     if active_environment != CONDA_ENVIRONMENT:
@@ -163,31 +140,89 @@ def check_conda_environment() -> None:
         )
 
 
-def import_sklearn(versions: tuple[str, ...]):
+def import_sklearn():
     try:
         import sklearn
         from sklearn.cluster import HDBSCAN
-        from sklearn.preprocessing import StandardScaler
     except ImportError as exc:
         raise RuntimeError(
             "scikit-learn with sklearn.cluster.HDBSCAN is required. "
             f"Use the configured Conda environment '{CONDA_ENVIRONMENT}'."
         ) from exc
-    return sklearn, HDBSCAN, StandardScaler if "version_b" in versions else None
+    return sklearn, HDBSCAN
 
 
-def save_audit(prepared, scenario: str, version: str, output_root: Path) -> None:
-    audit_dir = tables_root(output_root) / "audits" / scenario / version
-    save_feature_audit(prepared, audit_dir)
-    print(f"{scenario} {version}: selected {len(prepared.feature_names)} features")
-    for feature in prepared.feature_names:
-        print(f"  - {feature}")
-    if prepared.extreme_columns.empty:
-        print("Extreme-value audit passed: selected features are within [-1, 1].")
+def matrix_path_for_input(hdbscan_input: HdbscanInput) -> Path:
+    filename = (
+        "features_standardized.csv"
+        if hdbscan_input.scale_label == "standardized_primary"
+        else "features_filled.csv"
+    )
+    return hdbscan_input.artifact.directory / filename
+
+
+def preprocessing_reference(hdbscan_input: HdbscanInput) -> dict[str, object]:
+    artifact = hdbscan_input.artifact
+    manifest_path = artifact.directory / "preprocessing_config.json"
+    matrix_path = matrix_path_for_input(hdbscan_input)
+    return {
+        "prepared_manifest_path": str(manifest_path.resolve()),
+        "prepared_manifest_sha256": sha256_file(manifest_path),
+        "matrix_path": str(matrix_path.resolve()),
+        "matrix_sha256": sha256_file(matrix_path),
+        "scenario": artifact.config["scenario"],
+        "feature_order": list(artifact.feature_names),
+        "scale_label": hdbscan_input.scale_label,
+        "structural_null_policy": STRUCTURAL_NULL_POLICY,
+        "structural_null_row_count": int(
+            artifact.metadata["had_structural_null"].sum()
+        )
+        if "had_structural_null" in artifact.metadata
+        else 0,
+    }
+
+
+def save_audit(
+    hdbscan_input: HdbscanInput,
+    version: str,
+    output_root: Path,
+    algorithm_parameters: dict[str, object] | None = None,
+) -> dict[str, object]:
+    """Copy the immutable preprocessing audit with the HDBSCAN matrix identity."""
+    reference = preprocessing_reference(hdbscan_input)
+    if algorithm_parameters is not None:
+        reference["algorithm_parameters"] = algorithm_parameters
+        parameter_directory = (
+            f"min_cluster_size_{algorithm_parameters['min_cluster_size']}"
+            f"_min_samples_{algorithm_parameters['min_samples']}"
+        )
     else:
-        print("WARNING: selected features outside [-1, 1] were detected:")
-        for row in prepared.extreme_columns.itertuples(index=False):
-            print(f"  - {row.feature}: min={row.min:g}, max={row.max:g}")
+        parameter_directory = "audit_only"
+    audit_dir = (
+        tables_root(output_root)
+        / "audits"
+        / str(reference["scenario"])
+        / version
+        / parameter_directory
+    )
+    if audit_dir.exists():
+        raise FileExistsError(
+            f"HDBSCAN audit directory already exists: {audit_dir}"
+        )
+    audit_dir.mkdir(parents=True, exist_ok=False)
+    audit = hdbscan_input.artifact.audit.copy()
+    if audit.empty:
+        audit = pd.DataFrame([{}])
+    for key, value in reference.items():
+        if isinstance(value, list):
+            audit[key] = ",".join(value)
+        elif isinstance(value, dict):
+            audit[key] = json.dumps(value, sort_keys=True)
+        else:
+            audit[key] = value
+    audit.to_csv(audit_dir / "preprocessing_audit.csv", index=False)
+    write_json(audit_dir / "preprocessing_identity.json", reference)
+    return reference
 
 
 def cluster_statistics(labels: np.ndarray) -> dict[str, object]:
@@ -211,52 +246,103 @@ def cluster_statistics(labels: np.ndarray) -> dict[str, object]:
     }
 
 
+def build_prepared_label_table(
+    artifact: PreparedArtifact, labels: np.ndarray, scenario: str, version: str
+) -> pd.DataFrame:
+    """Join labels to the preserved metadata row order, never a re-read source CSV."""
+    if len(labels) != len(artifact.metadata):
+        raise ValueError("HDBSCAN label count does not match prepared metadata rows.")
+    metadata = artifact.metadata.reset_index(drop=True)
+    if "MS_ID" in metadata.columns:
+        street_id = metadata["MS_ID"]
+    elif "fid" in metadata.columns:
+        street_id = metadata["fid"]
+    else:
+        street_id = metadata["source_row_position"]
+    output = pd.DataFrame({"street_id": street_id})
+    for column in ("source_row_position", "fid", "MS_ID"):
+        if column in metadata.columns:
+            output[column] = metadata[column]
+    output["scenario"] = scenario
+    output["version"] = version
+    output["cluster_id"] = labels
+    return output
+
+
+def default_output_root(artifact: PreparedArtifact) -> Path:
+    source_path = Path(str(artifact.config["source_path"]))
+    return resolve_dataset_output_root(source_path, PIPELINE_ROOT)
+
+
+def run_destination(
+    output_root: Path,
+    scenario: str,
+    version: str,
+    min_cluster_size: int,
+    min_samples: int,
+) -> Path:
+    """Return the immutable final directory for one concrete HDBSCAN run."""
+    return (
+        output_root
+        / "clustering_results"
+        / scenario
+        / version
+        / f"min_cluster_size_{min_cluster_size}_min_samples_{min_samples}"
+    )
+
+
 def run_experiments(versions: tuple[str, ...]) -> None:
     args = parse_args(versions)
     check_conda_environment()
-    (
-        input_path,
-        output_root,
-        scenarios,
-        min_cluster_size,
-        min_samples,
-        linked_version_a_config,
-    ) = resolve_run_config(args, versions)
-    print(f"Reading: {input_path}")
-    data = pd.read_csv(input_path)
-    input_sha256 = sha256_file(input_path)
+    if not versions:
+        raise ValueError("At least one HDBSCAN version is required.")
+    inputs = {version: load_hdbscan_input(args.prepared, version) for version in versions}
+    scenarios = {str(item.artifact.config["scenario"]) for item in inputs.values()}
+    if len(scenarios) != 1:
+        raise ValueError("All HDBSCAN versions must use the same prepared scenario.")
+    scenario = scenarios.pop()
+    artifact = next(iter(inputs.values())).artifact
+    output_root = (
+        args.output_root.resolve() if args.output_root is not None else default_output_root(artifact)
+    )
     ensure_pipeline_dirs(output_root)
-
-    prepared_by_scenario = {}
-    for scenario in scenarios:
-        prepared = prepare_features(data, scenario)
-        prepared_by_scenario[scenario] = prepared
-        for version in versions:
-            save_audit(prepared, scenario, version, output_root)
     if args.audit_only:
+        for version, hdbscan_input in inputs.items():
+            save_audit(hdbscan_input, version, output_root)
         print("Audit-only mode completed; HDBSCAN was not run.")
         return
 
-    sklearn, HDBSCAN, StandardScaler = import_sklearn(versions)
-
-    if "version_a" in versions:
-        config = {
-            "dataset_name": dataset_name_from_input(input_path),
-            "input_file": str(input_path),
-            "input_sha256": input_sha256,
-            "scenarios": scenarios,
-            "min_cluster_size": min_cluster_size,
-            "min_samples": min_samples,
-            "metric": METRIC,
-            "cluster_selection_method": CLUSTER_SELECTION_METHOD,
-            "missing_value_strategy": MISSING_VALUE_STRATEGY,
-            "timestamp": utc_now_iso(),
-        }
-        config_path = write_last_version_a_config(output_root, config)
-        linked_version_a_config = config
-        print(f"Saved Version A configuration: {config_path}")
-
-    total_runs = len(scenarios) * len(versions)
+    min_cluster_size, min_samples = resolve_hdbscan_parameters(args)
+    algorithm_parameters = {
+        "min_cluster_size": min_cluster_size,
+        "min_samples": min_samples,
+        "metric": METRIC,
+        "cluster_selection_method": CLUSTER_SELECTION_METHOD,
+    }
+    destinations = {
+        version: run_destination(
+            output_root, scenario, version, min_cluster_size, min_samples
+        )
+        for version in versions
+    }
+    existing_destinations = [
+        destination for destination in destinations.values() if destination.exists()
+    ]
+    if existing_destinations:
+        raise FileExistsError(
+            "HDBSCAN final output directory already exists: "
+            + ", ".join(str(destination) for destination in existing_destinations)
+        )
+    references = {
+        version: save_audit(
+            hdbscan_input, version, output_root, algorithm_parameters
+        )
+        for version, hdbscan_input in inputs.items()
+    }
+    sklearn, HDBSCAN = import_sklearn()
+    total_runs = len(versions)
+    print(f"Prepared artifact: {artifact.directory}")
+    print(f"Scenario: {scenario}")
     print(f"Total Runs: {total_runs}")
     print(f"min_cluster_size: {min_cluster_size}")
     print(f"min_samples: {min_samples}")
@@ -266,20 +352,11 @@ def run_experiments(versions: tuple[str, ...]) -> None:
     experiment_start = time.perf_counter()
     runtime_log = output_root / "logs" / "runtime_log.csv"
 
-    for current, (scenario, version) in enumerate(
-        ((scenario, version) for scenario in scenarios for version in versions),
-        start=1,
-    ):
-        experiment_id = (
-            f"{scenario}_{version}_mcs_{min_cluster_size}_ms_{min_samples}"
-        )
-        destination = (
-            output_root
-            / "clustering_results"
-            / scenario
-            / version
-            / f"min_cluster_size_{min_cluster_size}_min_samples_{min_samples}"
-        )
+    for current, version in enumerate(versions, start=1):
+        hdbscan_input = inputs[version]
+        reference = references[version]
+        experiment_id = f"{scenario}_{version}_mcs_{min_cluster_size}_ms_{min_samples}"
+        destination = destinations[version]
         labels_path = destination / "cluster_labels.csv"
         metadata_path = destination / "cluster_metadata.json"
         print_progress(
@@ -292,15 +369,6 @@ def run_experiments(versions: tuple[str, ...]) -> None:
             time.perf_counter() - experiment_start,
             completed_durations,
         )
-        if labels_path.exists() and metadata_path.exists() and not args.overwrite:
-            print("Completed output already exists; skipping. Use --overwrite to recompute.")
-            continue
-
-        prepared = prepared_by_scenario[scenario]
-        clustering_input = prepared.values.to_numpy(dtype=float)
-        if version == "version_b":
-            clustering_input = StandardScaler().fit_transform(clustering_input)
-
         start_iso = utc_now_iso()
         run_start = time.perf_counter()
         log_row = {
@@ -308,6 +376,7 @@ def run_experiments(versions: tuple[str, ...]) -> None:
             "version": version,
             "min_cluster_size": min_cluster_size,
             "min_samples": min_samples,
+            "scale_label": hdbscan_input.scale_label,
             "start_time": start_iso,
         }
         try:
@@ -316,28 +385,39 @@ def run_experiments(versions: tuple[str, ...]) -> None:
                 min_samples=min_samples,
                 metric=METRIC,
                 cluster_selection_method=CLUSTER_SELECTION_METHOD,
-            ).fit_predict(clustering_input)
+            ).fit_predict(hdbscan_input.values)
             duration = time.perf_counter() - run_start
             end_iso = utc_now_iso()
             statistics = cluster_statistics(labels)
             destination.mkdir(parents=True, exist_ok=True)
-            build_label_table(data, labels, scenario, version).to_csv(
+            build_prepared_label_table(artifact, labels, scenario, version).to_csv(
                 labels_path, index=False
             )
             statistics["cluster_sizes"].to_csv(
                 destination / "cluster_sizes.csv", index=False
             )
+            audit = artifact.audit.copy()
+            if audit.empty:
+                audit = pd.DataFrame([{}])
+            for key, value in reference.items():
+                if isinstance(value, list):
+                    audit[key] = ",".join(value)
+                elif isinstance(value, dict):
+                    audit[key] = json.dumps(value, sort_keys=True)
+                else:
+                    audit[key] = value
+            audit.to_csv(destination / "preprocessing_audit.csv", index=False)
             metadata = {
                 "experiment_id": experiment_id,
-                "dataset_name": dataset_name_from_input(input_path),
+                "dataset_name": dataset_name_from_input(Path(str(artifact.config["source_path"]))),
                 "pipeline_dataset_root": str(output_root),
-                "linked_version_a_config": linked_version_a_config,
-                "scenario": scenario,
                 "version": version,
                 "min_cluster_size": min_cluster_size,
                 "min_samples": min_samples,
                 "metric": METRIC,
                 "cluster_selection_method": CLUSTER_SELECTION_METHOD,
+                "algorithm_parameters": algorithm_parameters,
+                **reference,
                 "n_clusters": statistics["n_clusters"],
                 "noise_count": statistics["noise_count"],
                 "noise_ratio": statistics["noise_ratio"],
@@ -345,10 +425,6 @@ def run_experiments(versions: tuple[str, ...]) -> None:
                 "runtime_seconds": duration,
                 "start_time": start_iso,
                 "end_time": end_iso,
-                "input_file": str(input_path),
-                "input_sha256": input_sha256,
-                "selected_features": prepared.feature_names,
-                "missing_value_strategy": MISSING_VALUE_STRATEGY,
                 "scikit_learn_version": sklearn.__version__,
                 **python_runtime_metadata(),
             }
@@ -388,8 +464,9 @@ def run_experiments(versions: tuple[str, ...]) -> None:
 
 
 def main(*versions: str) -> None:
+    selected_versions = tuple(versions) or ("version_a", "version_b")
     try:
-        run_experiments(tuple(versions))
+        run_experiments(selected_versions)
     except (FileNotFoundError, RuntimeError, ValueError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         raise SystemExit(1)

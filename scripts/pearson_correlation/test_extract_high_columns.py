@@ -2,6 +2,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+import warnings
 from unittest.mock import patch
 
 import pandas as pd
@@ -54,7 +55,6 @@ class ExtractHighColumnsScriptTests(unittest.TestCase):
                 "MS_ID",
                 "Street_type_NOR",
                 "Index_population",
-                "Per_extent",
                 "PFAB5k_NOR",
                 "PF_Index_population",
                 "PF_Index_Risk_equal",
@@ -78,7 +78,6 @@ class ExtractHighColumnsScriptTests(unittest.TestCase):
                 "MS_ID",
                 "Street_type_NOR",
                 "Index_population",
-                "Tem_extent",
                 "TFAB5k_NOR",
                 "TF_Index_population",
                 "TF_Index_Risk_equal",
@@ -152,27 +151,24 @@ class ExtractHighColumnsScriptTests(unittest.TestCase):
         with patch.object(
             sys,
             "argv",
-            ["extract_high_columns.py", "--scenario", "PF"],
+            [
+                "extract_high_columns.py",
+                "--input",
+                "input.csv",
+                "--scenario",
+                "PF",
+            ],
         ):
             self.assertEqual(ehc.parse_args().scenario, "pf")
 
-    def test_input_prompt_uses_default_or_typed_path(self) -> None:
-        self.assertTrue(
-            hasattr(ehc, "prompt_input_path"),
-            "script must define prompt_input_path",
-        )
-        with patch("builtins.input", return_value="") as mocked_input:
-            self.assertEqual(ehc.prompt_input_path(), ehc.DEFAULT_INPUT)
-        mocked_input.assert_called_once_with(
-            f"Enter input CSV path [{ehc.DEFAULT_INPUT}]: "
-        )
-
-        with patch("builtins.input", return_value="  custom.csv  "):
-            self.assertEqual(ehc.prompt_input_path(), Path("custom.csv"))
-
-    def test_input_argument_is_optional_and_accepts_path(self) -> None:
+    def test_main_requires_explicit_input_argument(self) -> None:
         with patch.object(sys, "argv", ["extract_high_columns.py"]):
-            self.assertIsNone(ehc.parse_args().input)
+            with self.assertRaises(SystemExit) as raised:
+                ehc.main()
+
+        self.assertEqual(raised.exception.code, 2)
+
+    def test_input_argument_accepts_path(self) -> None:
         with patch.object(
             sys,
             "argv",
@@ -180,42 +176,25 @@ class ExtractHighColumnsScriptTests(unittest.TestCase):
         ):
             self.assertEqual(ehc.parse_args().input, Path("custom.csv"))
 
-    def test_main_prompts_when_input_is_omitted(self) -> None:
-        prompted_path = Path("prompted.csv")
-        resolved_path = Path("resolved.csv").resolve()
-        arguments = [
-            "extract_high_columns.py",
-            "--scenario",
-            "pf",
-            "--remove",
-            "PFAB5k_NOR",
-        ]
-        with patch.object(sys, "argv", arguments):
-            with patch.object(
-                ehc,
-                "prompt_input_path",
-                return_value=prompted_path,
-                create=True,
-            ) as mocked_prompt:
-                with patch.object(
-                    ehc, "resolve_input_path", return_value=resolved_path
-                ) as mocked_resolve:
-                    with patch.object(
-                        ehc.pd, "read_csv", return_value=self.data.iloc[:0]
-                    ):
-                        with patch.object(ehc, "extract_dataset") as mocked_extract:
-                            ehc.main()
+    def test_input_resolver_handles_data_filename_and_explicit_path(self) -> None:
+        with tempfile.NamedTemporaryFile(
+            dir=ehc.PROJECT_ROOT / "data",
+            suffix=".csv",
+            delete=False,
+        ) as temporary_file:
+            input_path = Path(temporary_file.name)
+        self.addCleanup(input_path.unlink, missing_ok=True)
 
-        mocked_prompt.assert_called_once_with()
-        mocked_resolve.assert_called_once_with(prompted_path)
-        mocked_extract.assert_called_once_with(
-            resolved_path,
-            "pf",
-            ["PFAB5k_NOR"],
-            ehc.DEFAULT_OUTPUT_ROOT,
+        self.assertEqual(
+            ehc.resolve_input_path(input_path.name),
+            input_path.resolve(),
+        )
+        self.assertEqual(
+            ehc.resolve_input_path(input_path),
+            input_path.resolve(),
         )
 
-    def test_main_explicit_input_bypasses_prompt(self) -> None:
+    def test_main_explicit_input_warns_that_extraction_is_legacy(self) -> None:
         cli_path = Path("cli.csv")
         resolved_path = Path("resolved.csv").resolve()
         arguments = [
@@ -229,20 +208,29 @@ class ExtractHighColumnsScriptTests(unittest.TestCase):
         ]
         with patch.object(sys, "argv", arguments):
             with patch.object(
-                ehc,
-                "prompt_input_path",
-                side_effect=AssertionError("input prompt must be bypassed"),
-                create=True,
-            ):
+                ehc, "resolve_input_path", return_value=resolved_path
+            ) as mocked_resolve:
                 with patch.object(
-                    ehc, "resolve_input_path", return_value=resolved_path
-                ) as mocked_resolve:
+                    ehc.pd, "read_csv", return_value=self.data.iloc[:0]
+                ):
                     with patch.object(
-                        ehc.pd, "read_csv", return_value=self.data.iloc[:0]
-                    ):
-                        with patch.object(ehc, "extract_dataset") as mocked_extract:
+                        ehc, "extract_dataset"
+                    ) as mocked_extract, patch("builtins.print") as mocked_print:
+                        with warnings.catch_warnings(record=True) as caught:
+                            warnings.simplefilter("always")
                             ehc.main()
 
+        deprecations = [
+            warning
+            for warning in caught
+            if warning.category is DeprecationWarning
+        ]
+        self.assertEqual(len(deprecations), 1)
+        self.assertIn(
+            "prepare_clustering_inputs.py",
+            str(deprecations[0].message),
+        )
+        mocked_print.assert_called_once_with(ehc.LEGACY_NOTICE)
         mocked_resolve.assert_called_once_with(cli_path)
         mocked_extract.assert_called_once_with(
             resolved_path,

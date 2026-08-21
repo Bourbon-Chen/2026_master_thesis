@@ -1,0 +1,183 @@
+{
+  "artifact_sha256": {
+    "excluded_features.csv": "5f3afb68db61eb77240e9c98e52da8097ff275aa5cbe30bce7333bc55c4b22cb",
+    "features_filled.csv": "7dd40fd93fac13a6478a3680b00c71fa63e7721c2f835616be20df19cbbb10c2",
+    "features_original.csv": "21f7bd0a49d32eacc7e59fb537e9cc6d33bc19be515ce829cc836849b1134808",
+    "features_standardized.csv": "2294ba68b632112ffa5fefdf56c370674f5d3754a054acbf9de93e3a923070a4",
+    "metadata.csv": "ed9bc39edb859ff1a84446aa907a2559fb65fce2c1cf8a73e7213e11106de7ef",
+    "preprocessing_audit.csv": "91ac7a4b441b902eb6d967f255e7ac9b011e9320471144d4c482efad8155ceed",
+    "scaler_parameters.csv": "daf295f3659f9830a33e59455e2f30ec474348ef6840c2b9a04023f56d9f669c",
+    "selected_features.csv": "3f59bd2d747ecb259b7d0299389b123221462c510c79cf0c61d39cca3e8cf940"
+  },
+  "created_at_utc": "2026-07-28T13:36:42.843114Z",
+  "exclusion_path": null,
+  "exclusion_sha256": null,
+  "feature_order": [
+    "Per_extent",
+    "N_PFlossR_2kiw",
+    "N_PFlossR_2ktw",
+    "N_PFlossR_2kmw",
+    "PFResident_lossR",
+    "PFDaynight_lossR",
+    "PFPRM_lossR",
+    "PFAB2k_NOR",
+    "PFAB5k_NOR",
+    "PFABC_NOR"
+  ],
+  "feature_order_sha256": "b9048d5e9304ed44c8273d06acbd09716607fea720d57e0057998bba3e372901",
+  "marker_rules": {
+    "PF": [
+      "^PF",
+      "^N_PF",
+      "^Per_"
+    ],
+    "TF": [
+      "^TF",
+      "^N_TF",
+      "^Tem_"
+    ],
+    "anchored": true,
+    "case_sensitive": false
+  },
+  "matrix_sha256": "2294ba68b632112ffa5fefdf56c370674f5d3754a054acbf9de93e3a923070a4",
+  "risk_filter": {
+    "column": "PF_Index_Risk_equal",
+    "operator": ">",
+    "threshold": 0.25
+  },
+  "scaler": {
+    "class": "sklearn.preprocessing.StandardScaler",
+    "parameters": {
+      "copy": true,
+      "with_mean": true,
+      "with_std": true
+    },
+    "statistics": [
+      {
+        "feature": "Per_extent",
+        "filled_max": 1.0,
+        "filled_min": 0.0,
+        "mean": 0.04365853658536585,
+        "original_max": 1.0,
+        "original_min": 0.0,
+        "original_null_count": 0,
+        "scale": 0.20433420851289222,
+        "variance": 0.04175246876859011
+      },
+      {
+        "feature": "N_PFlossR_2kiw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.501806169210125,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 1342,
+        "scale": 0.5358973068675625,
+        "variance": 0.2871859235079065
+      },
+      {
+        "feature": "N_PFlossR_2ktw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.3624701987734199,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 18,
+        "scale": 0.38384604525092525,
+        "variance": 0.14733778645477535
+      },
+      {
+        "feature": "N_PFlossR_2kmw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.3684710070579859,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 391,
+        "scale": 0.42475803959139735,
+        "variance": 0.1804193921975271
+      },
+      {
+        "feature": "PFResident_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.11157374348333395,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 1633,
+        "scale": 0.2624129756398214,
+        "variance": 0.06886056978414551
+      },
+      {
+        "feature": "PFDaynight_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.09372127499794923,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 1369,
+        "scale": 0.23164384011138328,
+        "variance": 0.0536588686615481
+      },
+      {
+        "feature": "PFPRM_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.0826979828815741,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 1841,
+        "scale": 0.23003416869436646,
+        "variance": 0.052915718766908246
+      },
+      {
+        "feature": "PFAB2k_NOR",
+        "filled_max": 1.0,
+        "filled_min": 0.0,
+        "mean": 0.6015173465465342,
+        "original_max": 1.0,
+        "original_min": 0.0,
+        "original_null_count": 63,
+        "scale": 0.33249834213731577,
+        "variance": 0.1105551475240635
+      },
+      {
+        "feature": "PFAB5k_NOR",
+        "filled_max": 1.0,
+        "filled_min": 0.0,
+        "mean": 0.74533444528708,
+        "original_max": 1.0,
+        "original_min": 0.0,
+        "original_null_count": 63,
+        "scale": 0.2939905262335049,
+        "variance": 0.08643042951505314
+      },
+      {
+        "feature": "PFABC_NOR",
+        "filled_max": 0.630473198717947,
+        "filled_min": 0.0,
+        "mean": 0.0813788104715932,
+        "original_max": 0.630473198717947,
+        "original_min": 0.0,
+        "original_null_count": 0,
+        "scale": 0.10720500429520287,
+        "variance": 0.011492912945934465
+      }
+    ]
+  },
+  "scenario": "PF",
+  "source_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\data\\MT_UPDATE_MS_HEV_v3_NORcleaned_pf_risk_gt_0_25.csv",
+  "source_row_count": 4100,
+  "source_sha256": "f81e0efc1acfab1f4569598b7ad63849c952f397cc0bf05922f8c86573d8452b",
+  "structural_null": {
+    "fill_value": 0.0,
+    "semantic_meaning": "no measurable change",
+    "strategy": "fill_with_constant"
+  },
+  "versions": {
+    "numpy": "2.3.3",
+    "pandas": "2.3.3",
+    "python": "3.11.14",
+    "scikit_learn": "1.7.2"
+  }
+}

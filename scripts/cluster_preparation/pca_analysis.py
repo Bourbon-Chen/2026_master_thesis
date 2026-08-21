@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Run exploratory PCA on the final PF or TF clustering variables."""
+"""Run exploratory PCA on a verified prepared clustering artifact."""
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Sequence
 
 import matplotlib
@@ -15,7 +17,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_numeric_dtype
 
 
 # ---------------------------------------------------------------------------
@@ -26,23 +27,25 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.utils.scenario_features import (
-    DEFAULT_INPUT_PATHS,
-    PF_FEATURES,
-    PF_METADATA_COLUMNS,
-    SCENARIO_CONFIG,
-    TF_FEATURES,
-    TF_METADATA_COLUMNS,
+from scripts.utils.clustering_preprocessing import (
+    PreparedArtifact,
+    load_prepared_artifact,
+    sha256_file,
 )
 
 DEFAULT_OUTPUT_ROOT = PROJECT_ROOT / "output_pca"
-
-@dataclass
-class PreparedDataset:
-    scenario: str
-    metadata: pd.DataFrame
-    features: pd.DataFrame
-    fill_counts: pd.Series
+PCA_MANAGED_FILENAMES = (
+    "pca_summary.csv",
+    "pca_loadings.csv",
+    "pca_scores.csv",
+    "explained_variance.png",
+    "cumulative_variance.png",
+    "pca_scatter.png",
+    "loading_plot.png",
+    "correlation_circle.png",
+    "pca_report.txt",
+    "preprocessing_reference.json",
+)
 
 
 @dataclass
@@ -54,85 +57,16 @@ class PcaResult:
     correlation_coordinates: pd.DataFrame
 
 
-def normalize_scenario(value: str) -> str:
-    scenario = value.strip().upper()
-    if scenario not in SCENARIO_CONFIG:
-        raise ValueError("Scenario must be PF or TF.")
-    return scenario
-
-
-def prompt_scenario() -> str:
-    while True:
-        value = input("Select scenario (PF/TF): ").strip()
-        try:
-            return normalize_scenario(value)
-        except ValueError:
-            print("Please enter PF or TF.")
-
-
-def _scenario_features(scenario: str) -> Sequence[str]:
-    return SCENARIO_CONFIG[scenario]["features"]
-
-
-def _scenario_metadata(scenario: str) -> Sequence[str]:
-    return SCENARIO_CONFIG[scenario]["metadata"]
-
-
-def load_data(input_path: Path, scenario: str) -> PreparedDataset:
-    """Load one scenario and keep only metadata plus explicit PCA variables."""
-    scenario = normalize_scenario(scenario)
-    input_path = Path(input_path)
-    if not input_path.is_file():
-        raise FileNotFoundError(f"Input CSV not found: {input_path}")
-
-    data = pd.read_csv(input_path, low_memory=False)
-    features = list(_scenario_features(scenario))
-    metadata_columns = list(_scenario_metadata(scenario))
-    required_columns = metadata_columns + features
-    missing_columns = [
-        column for column in required_columns if column not in data.columns
-    ]
-    if missing_columns:
-        raise ValueError(
-            "Missing required columns for "
-            f"{scenario}: {', '.join(missing_columns)}"
-        )
-
-    for column in features:
-        if not is_numeric_dtype(data[column]):
-            raise ValueError(f"PCA feature must be numeric: {column}")
-        values = data[column].to_numpy(dtype=float)
-        if np.isinf(values).any():
-            raise ValueError(f"PCA feature contains infinity: {column}")
-
-    feature_values = data.loc[:, features].copy()
-    fill_counts = feature_values.isna().sum().astype(int)
-    feature_values = feature_values.fillna(0)
-    if feature_values.isna().any().any():
-        raise ValueError("Missing feature values remain after fill-zero imputation.")
-    if len(feature_values) < 2:
-        raise ValueError("PCA requires at least two observations.")
-
-    return PreparedDataset(
-        scenario=scenario,
-        metadata=data.loc[:, metadata_columns].copy(),
-        features=feature_values,
-        fill_counts=fill_counts,
-    )
-
-
-def standardize(features: pd.DataFrame) -> np.ndarray:
-    """Standardize PCA variables with StandardScaler."""
-    try:
-        from sklearn.preprocessing import StandardScaler
-    except ImportError as error:
-        raise ImportError(
-            "scikit-learn is required for PCA standardization. "
-            "Install/use the project environment from 2026master.yml."
-        ) from error
-
-    scaler = StandardScaler()
-    return scaler.fit_transform(features.to_numpy(dtype=float))
+def load_pca_input(path: Path) -> PreparedArtifact:
+    """Load a prepared artifact from its directory or manifest path."""
+    prepared_path = Path(path)
+    if prepared_path.is_file():
+        if prepared_path.name != "preprocessing_config.json":
+            raise ValueError(
+                "Prepared input file must be preprocessing_config.json"
+            )
+        prepared_path = prepared_path.parent
+    return load_prepared_artifact(prepared_path)
 
 
 def run_pca(values: np.ndarray, feature_names: Sequence[str]) -> PcaResult:
@@ -193,7 +127,9 @@ def run_pca(values: np.ndarray, feature_names: Sequence[str]) -> PcaResult:
     )
 
 
-def save_tables(dataset: PreparedDataset, result: PcaResult, output_dir: Path) -> None:
+def save_tables(
+    artifact: PreparedArtifact, result: PcaResult, output_dir: Path
+) -> None:
     """Save PCA summary, loadings, and metadata-preserving scores."""
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -201,7 +137,7 @@ def save_tables(dataset: PreparedDataset, result: PcaResult, output_dir: Path) -
     result.loadings.to_csv(output_dir / "pca_loadings.csv", index=False)
     scores = pd.concat(
         [
-            dataset.metadata.reset_index(drop=True),
+            artifact.metadata.reset_index(drop=True),
             result.full_scores.reset_index(drop=True),
         ],
         axis=1,
@@ -341,7 +277,7 @@ def plot_correlation_circle(result: PcaResult, output_path: Path) -> None:
 
 
 def generate_report(
-    dataset: PreparedDataset, result: PcaResult, output_path: Path
+    artifact: PreparedArtifact, result: PcaResult, output_path: Path
 ) -> None:
     top_count = min(5, len(result.summary))
     first_two_cumulative = float(
@@ -360,10 +296,10 @@ def generate_report(
     )
 
     lines = [
-        f"PCA Report - {dataset.scenario}",
-        "=" * (13 + len(dataset.scenario)),
-        f"Total observations: {len(dataset.features)}",
-        f"Variables: {len(dataset.features.columns)}",
+        f"PCA Report - {artifact.config['scenario']}",
+        "=" * (13 + len(str(artifact.config["scenario"]))),
+        f"Total observations: {len(artifact.standardized_features)}",
+        f"Variables: {len(artifact.feature_names)}",
         "",
         "First 5 component explained variance ratios:",
     ]
@@ -383,36 +319,117 @@ def generate_report(
             "Fill-zero counts by PCA variable:",
         ]
     )
-    for feature, count in dataset.fill_counts.items():
+    for feature, count in artifact.original_features.isna().sum().items():
         lines.append(f"  - {feature}: {int(count)}")
-    lines.extend(["", interpretation, ""])
+    lines.extend(
+        [
+            "",
+            "PCA is diagnostic and summarizes the prepared clustering geometry.",
+            "K-means does not consume PCA scores; it consumes the same prepared "
+            "standardized matrix directly.",
+            "",
+            interpretation,
+            "",
+        ]
+    )
 
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def run_analysis(input_path: Path, scenario: str, output_root: Path) -> Path:
-    scenario = normalize_scenario(scenario)
-    print("Loading dataset...")
-    dataset = load_data(input_path, scenario)
-    print("Standardizing features...")
-    values = standardize(dataset.features)
-    print("Running PCA...")
-    result = run_pca(values, dataset.features.columns)
+def write_preprocessing_reference(
+    artifact: PreparedArtifact, output_path: Path
+) -> None:
+    """Copy the verified preprocessing identity into a PCA output."""
+    manifest_path = (
+        artifact.directory / "preprocessing_config.json"
+    ).resolve()
+    reference = {
+        "manifest_path": str(manifest_path),
+        "manifest_sha256": sha256_file(manifest_path),
+        "matrix_sha256": artifact.config["matrix_sha256"],
+        "scenario": artifact.config["scenario"],
+        "row_count": len(artifact.standardized_features),
+        "feature_names": list(artifact.feature_names),
+    }
+    Path(output_path).write_text(
+        json.dumps(reference, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
 
-    output_dir = Path(output_root) / scenario.lower()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    save_tables(dataset, result, output_dir)
+
+def _write_pca_outputs(
+    artifact: PreparedArtifact,
+    result: PcaResult,
+    output_dir: Path,
+) -> None:
+    """Generate the complete managed PCA output set in one directory."""
+    save_tables(artifact, result, output_dir)
     plot_scree(result.summary, output_dir / "explained_variance.png")
-    plot_cumulative_variance(result.summary, output_dir / "cumulative_variance.png")
+    plot_cumulative_variance(
+        result.summary,
+        output_dir / "cumulative_variance.png",
+    )
     plot_scatter(result, output_dir / "pca_scatter.png")
     plot_loading(result, output_dir / "loading_plot.png")
-    plot_correlation_circle(result, output_dir / "correlation_circle.png")
-    generate_report(dataset, result, output_dir / "pca_report.txt")
+    plot_correlation_circle(
+        result,
+        output_dir / "correlation_circle.png",
+    )
+    generate_report(artifact, result, output_dir / "pca_report.txt")
+    write_preprocessing_reference(
+        artifact,
+        output_dir / "preprocessing_reference.json",
+    )
 
-    print(f"Number of variables: {len(dataset.features.columns)}")
-    print(f"Number of observations: {len(dataset.features)}")
+
+def _publish_pca_outputs(staging_dir: Path, output_dir: Path) -> None:
+    """Replace only the complete PCA-managed set in the final directory."""
+    missing = [
+        filename
+        for filename in PCA_MANAGED_FILENAMES
+        if not (staging_dir / filename).is_file()
+    ]
+    if missing:
+        raise RuntimeError(
+            "PCA staging did not produce every managed output: "
+            + ", ".join(missing)
+        )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    for filename in PCA_MANAGED_FILENAMES:
+        (staging_dir / filename).replace(output_dir / filename)
+
+
+def run_analysis(prepared_path: Path, output_root: Path) -> Path:
+    print("Loading prepared artifact...")
+    artifact = load_pca_input(prepared_path)
+    scenario = str(artifact.config["scenario"])
+    output_root = Path(output_root)
+    output_dir = output_root / scenario.lower()
+    if output_root.exists() and not output_root.is_dir():
+        raise NotADirectoryError(
+            f"PCA output root is not a directory: {output_root}"
+        )
+    if output_dir.exists() and not output_dir.is_dir():
+        raise NotADirectoryError(
+            f"PCA final output path is not a directory: {output_dir}"
+        )
+    output_root.mkdir(parents=True, exist_ok=True)
+    values = artifact.standardized_features.to_numpy(dtype=float, copy=True)
+    print("Running PCA...")
+    result = run_pca(values, artifact.feature_names)
+
+    with TemporaryDirectory(
+        prefix=f".pca-{scenario.lower()}-",
+        dir=output_root,
+    ) as temporary_directory:
+        staging_dir = Path(temporary_directory)
+        _write_pca_outputs(artifact, result, staging_dir)
+        _publish_pca_outputs(staging_dir, output_dir)
+
+    print(f"Number of variables: {len(artifact.feature_names)}")
+    print(f"Number of observations: {len(artifact.standardized_features)}")
     print(
         "PC1 explained variance: "
         f"{result.summary.loc[0, 'Explained Variance Ratio']:.4f}"
@@ -432,26 +449,20 @@ def run_analysis(input_path: Path, scenario: str, output_root: Path) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Run exploratory PCA for one scenario after correlation-based "
-            "variable screening."
+            "Run diagnostic PCA on a verified prepared clustering artifact. "
+            "K-means does not consume the PCA scores."
         )
     )
     parser.add_argument(
-        "-s",
-        "--scenario",
-        choices=sorted(SCENARIO_CONFIG),
-        default=None,
-        help="Scenario to analyze: PF or TF. Prompted when omitted.",
-    )
-    parser.add_argument(
-        "-i",
-        "--input",
+        "--prepared",
         type=Path,
         default=None,
-        help="Input CSV. Defaults to the configured PF/TF for_PCA CSV.",
+        help=(
+            "Prepared scenario directory or preprocessing_config.json. "
+            "Prompted when omitted."
+        ),
     )
     parser.add_argument(
-        "-o",
         "--output-root",
         type=Path,
         default=DEFAULT_OUTPUT_ROOT,
@@ -462,9 +473,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    scenario = normalize_scenario(args.scenario) if args.scenario else prompt_scenario()
-    input_path = args.input if args.input is not None else DEFAULT_INPUT_PATHS[scenario]
-    run_analysis(input_path, scenario, args.output_root)
+    prepared_path = (
+        args.prepared
+        if args.prepared is not None
+        else Path(
+            input(
+                "Prepared scenario directory or preprocessing_config.json: "
+            ).strip()
+        )
+    )
+    run_analysis(prepared_path, args.output_root)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,15 @@
+{
+  "feature_names": [
+    "N_PFlossR_2kiw",
+    "N_PFlossR_2kmw",
+    "PFResident_lossR",
+    "PFDaynight_lossR",
+    "PFAB5k_NOR",
+    "PFABC_NOR"
+  ],
+  "manifest_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing\\MT_UPDATE_MS_HEV_v3_NORcleaned_pf_risk_gt_0_25\\PF\\preprocessing_config.json",
+  "manifest_sha256": "f0fcf401ab0a8c588f9ed3da2fa9c7c0f6257a79429d95f35860889fddab0b33",
+  "matrix_sha256": "cc09f145af4a8049225873004a280b97544cc3b51668873b0b26811e6b814e5f",
+  "row_count": 4100,
+  "scenario": "PF"
+}

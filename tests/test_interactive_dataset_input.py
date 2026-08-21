@@ -54,7 +54,7 @@ class InteractiveInputTests(unittest.TestCase):
     def test_filter_input_behavior(self):
         self.assertEqual(
             FILTER.DEFAULT_INPUT.name,
-            "MT_UPDATE_MS_HEV_v2_NORcleaned.csv",
+            "MT_UPDATE_MS_HEV_v3_NORcleaned.csv",
         )
         self.assert_prompt_behavior(FILTER, FILTER.DEFAULT_INPUT)
         self.assert_argument_behavior(FILTER)
@@ -62,7 +62,7 @@ class InteractiveInputTests(unittest.TestCase):
     def test_correlation_input_behavior(self):
         self.assertEqual(
             CORRELATION.INPUT_FILE.name,
-            "MT_UPDATE_MS_HEV_v2_NORcleaned.csv",
+            "MT_UPDATE_MS_HEV_v3_NORcleaned.csv",
         )
         self.assert_prompt_behavior(CORRELATION, CORRELATION.INPUT_FILE)
         self.assert_argument_behavior(CORRELATION)
@@ -88,12 +88,6 @@ class InteractiveInputTests(unittest.TestCase):
 
     def test_correlation_main_runs_only_selected_scenario(self):
         data = CORRELATION.pd.DataFrame()
-        result = {
-            "features": [],
-            "high_pairs": [],
-            "within_high_pairs": [],
-            "cross_high_pairs": [],
-        }
         arguments = [
             "correlation_analysis.py",
             "--input",
@@ -103,8 +97,15 @@ class InteractiveInputTests(unittest.TestCase):
         for scenario in ("PF", "TF"):
             with self.subTest(scenario=scenario):
                 summary = Mock()
-                selected = {
-                    scenario: CORRELATION.SCENARIO_FEATURE_GROUPS[scenario]
+                feature_groups = {
+                    f"{scenario}_dynamic_group": [f"{scenario}_dynamic_feature"]
+                }
+                result = {
+                    "features": [f"{scenario}_dynamic_feature"],
+                    "feature_groups": feature_groups,
+                    "high_pairs": [],
+                    "within_high_pairs": [],
+                    "cross_high_pairs": [],
                 }
                 with TemporaryDirectory() as temporary_directory:
                     output_directory = Path(temporary_directory)
@@ -121,36 +122,30 @@ class InteractiveInputTests(unittest.TestCase):
                                     CORRELATION, "load_data", return_value=data
                                 ) as mocked_load:
                                     with patch.object(
-                                        CORRELATION, "validate_columns"
-                                    ) as mocked_validate:
+                                        CORRELATION,
+                                        "analyze_scenario",
+                                        return_value=result,
+                                    ) as mocked_analyze:
                                         with patch.object(
                                             CORRELATION,
-                                            "analyze_scenario",
-                                            return_value=result,
-                                        ) as mocked_analyze:
+                                            "create_combined_summary",
+                                            return_value=summary,
+                                        ) as mocked_summary:
                                             with patch.object(
-                                                CORRELATION,
-                                                "create_combined_summary",
-                                                return_value=summary,
-                                            ) as mocked_summary:
-                                                with patch.object(
-                                                    CORRELATION, "write_text_report"
-                                                ) as mocked_report:
-                                                    with patch("builtins.print"):
-                                                        CORRELATION.main()
+                                                CORRELATION, "write_text_report"
+                                            ) as mocked_report:
+                                                with patch("builtins.print"):
+                                                    CORRELATION.main()
 
                     mocked_scenario_prompt.assert_called_once_with()
                     mocked_load.assert_called_once_with(
                         Path("data/custom.csv").resolve()
                     )
-                    mocked_validate.assert_called_once_with(data, selected)
                     mocked_analyze.assert_called_once_with(
                         data,
                         scenario,
-                        CORRELATION.SCENARIO_FEATURE_GROUPS[scenario],
                         output_directory / scenario,
                         CORRELATION.CORRELATION_THRESHOLD,
-                        CORRELATION.EXPECTED_RANGES,
                     )
                     mocked_summary.assert_called_once_with({scenario: result})
                     summary.to_csv.assert_called_once_with(
@@ -162,7 +157,7 @@ class InteractiveInputTests(unittest.TestCase):
                     )
                     mocked_report.assert_called_once_with(
                         {scenario: result},
-                        selected,
+                        {scenario: feature_groups},
                         output_directory
                         / "combined_summary"
                         / "correlation_report.txt",

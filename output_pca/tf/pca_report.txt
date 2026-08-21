@@ -22,4 +22,7 @@ Fill-zero counts by PCA variable:
   - TFAB5k_NOR: 439
   - TFABC_NOR: 0
 
+PCA is diagnostic and summarizes the prepared clustering geometry.
+K-means does not consume PCA scores; it consumes the same prepared standardized matrix directly.
+
 The first two principal components only capture part of the data variance.

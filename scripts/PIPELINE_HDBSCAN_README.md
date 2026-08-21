@@ -79,7 +79,8 @@ python scripts\clustering\run_hdbscan_version_a.py --audit-only
 ```
 
 Completed modular runs with the same scenario, version, and parameter pair are
-skipped unless `--overwrite` is provided.
+immutable: the runner stops with an error instead of overwriting or mixing
+outputs. Use a new output root to run another experiment.
 
 ## Regenerate Outputs Without HDBSCAN
 
