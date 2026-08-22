@@ -2,9 +2,8 @@
   "scenario": "TF",
   "excluded_features": [
     "Tem_extent",
-    "TFAB2k_NOR",
     "TFPRM_lossR",
-    "N_TFlossR_2ktw"
+    "TFAB2k_NOR"
   ],
   "reason": "User-selected exclusions after Pearson correlation review"
 }

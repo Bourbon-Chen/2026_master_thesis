@@ -1,0 +1,259 @@
+{
+  "scenario": "TF",
+  "input_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing_7vars_run1\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25\\TF",
+  "output_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\output_kmeans_7vars_run1\\tf_k5_v7_kmeanspp_n50_mi500_rs42",
+  "k": 5,
+  "feature_list": [
+    "N_TFlossR_2kiw",
+    "N_TFlossR_2ktw",
+    "N_TFlossR_2kmw",
+    "TFResident_lossR",
+    "TFDaynight_lossR",
+    "TFAB5k_NOR",
+    "TFABC_NOR"
+  ],
+  "preprocessing_reference": {
+    "manifest_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing_7vars_run1\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25\\TF\\preprocessing_config.json",
+    "manifest_sha256": "00a7fb54c1de0391326f8038da570c0ea251f109f3b6d445b4f72ecbeeba4fea",
+    "matrix_sha256": "a638edc1ab757c6d4fb75e869a785ae4955e5992362da64b21ec66e52802bb8b",
+    "source_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\data\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25.csv",
+    "source_sha256": "59556c212befec4e1f0fe602334c43d5ba910cba667ec64ee3d6a46cd7d161bf",
+    "scenario": "TF",
+    "row_count": 13584,
+    "feature_names": [
+      "N_TFlossR_2kiw",
+      "N_TFlossR_2ktw",
+      "N_TFlossR_2kmw",
+      "TFResident_lossR",
+      "TFDaynight_lossR",
+      "TFAB5k_NOR",
+      "TFABC_NOR"
+    ],
+    "feature_count": 7,
+    "structural_null_row_count": 7556,
+    "structural_null_value_count": 15573,
+    "rows_excluded_for_null": 0
+  },
+  "excluded_columns": [
+    {
+      "column": "fid",
+      "reason": NaN
+    },
+    {
+      "column": "MS_ID",
+      "reason": NaN
+    },
+    {
+      "column": "Per_extent",
+      "reason": NaN
+    },
+    {
+      "column": "Tem_extent",
+      "reason": "explicit_research_exclusion"
+    },
+    {
+      "column": "Street_type_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "Resident_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "DayNight_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "PRM_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "Index_population",
+      "reason": NaN
+    },
+    {
+      "column": "N_PFlossR_2kiw",
+      "reason": NaN
+    },
+    {
+      "column": "N_PFlossR_2ktw",
+      "reason": NaN
+    },
+    {
+      "column": "N_PFlossR_2kmw",
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_acc_loss",
+      "reason": NaN
+    },
+    {
+      "column": "PFResident_lossR",
+      "reason": NaN
+    },
+    {
+      "column": "PFDaynight_lossR",
+      "reason": NaN
+    },
+    {
+      "column": "PFPRM_lossR",
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_population",
+      "reason": NaN
+    },
+    {
+      "column": "PFAB2k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "N_PFAB2k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "PFAB2k_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "PFAB5k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "N_PFAB5k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "PFAB5k_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "PFABC_NOR",
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_centrality",
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_V_equal",
+      "reason": NaN
+    },
+    {
+      "column": "TF_Index_acc_loss",
+      "reason": NaN
+    },
+    {
+      "column": "TFPRM_lossR",
+      "reason": "explicit_research_exclusion"
+    },
+    {
+      "column": "TF_Index_population",
+      "reason": NaN
+    },
+    {
+      "column": "TFAB2k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "N_TFAB2k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "TFAB2k_NOR",
+      "reason": "explicit_research_exclusion"
+    },
+    {
+      "column": "TFAB5k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "N_TFAB5k_lossR",
+      "reason": "raw_ab_lossR_replaced_by_normalized_NOR"
+    },
+    {
+      "column": "TF_Index_centrality",
+      "reason": NaN
+    },
+    {
+      "column": "TF_Index_V_equal",
+      "reason": NaN
+    },
+    {
+      "column": "PF_Index_Risk_equal",
+      "reason": NaN
+    },
+    {
+      "column": "TF_Index_Risk_equal",
+      "reason": NaN
+    }
+  ],
+  "id_columns": [
+    "fid",
+    "MS_ID",
+    "TF_Index_Risk_equal",
+    "source_row_position",
+    "structural_null_count",
+    "had_structural_null"
+  ],
+  "data_quality_issues": [],
+  "standard_scaler_applied": false,
+  "scaling_transformations_applied": [],
+  "kmeans_parameters": {
+    "init": "k-means++",
+    "n_init": 50,
+    "max_iter": 500,
+    "random_state": 42,
+    "algorithm": "lloyd",
+    "tol": 0.0001
+  },
+  "metric_parameters": {
+    "silhouette_sample_size": null,
+    "silhouette_working_memory_mb": 256
+  },
+  "sample_counts": {
+    "original": 13584,
+    "valid": 13584,
+    "removed": 0
+  },
+  "missing_counts": {
+    "N_TFlossR_2kiw": 4256,
+    "N_TFlossR_2ktw": 7,
+    "N_TFlossR_2kmw": 357,
+    "TFResident_lossR": 5595,
+    "TFDaynight_lossR": 4919,
+    "TFAB5k_NOR": 439
+  },
+  "missing_value_policy": "Prepared structural nulls retained.",
+  "cluster_label_ordering": "centroid PC1 projection",
+  "pca_explained_variance_percent": {
+    "pc1": 52.38158626615248,
+    "pc2": 16.060822945353124,
+    "pc1_plus_pc2": 68.4424092115056
+  },
+  "model_fit": {
+    "inertia": 31374.65773567287,
+    "n_iter": 19,
+    "converged": true,
+    "fit_seconds": 7.002670800007763
+  },
+  "runtime": {
+    "runtime_seconds": 10.979335500000161,
+    "runtime_scope": "start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication"
+  },
+  "versions": {
+    "python": "3.11.14",
+    "pandas": "2.3.3",
+    "numpy": "2.3.3",
+    "scikit_learn": "1.7.2"
+  },
+  "timestamps": {
+    "started_at": "2026-08-21T12:40:49+02:00",
+    "ended_at": "2026-08-21T12:41:00+02:00",
+    "ended_at_scope": "start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication",
+    "execution_timestamp": "2026-08-21T12:41:00+02:00"
+  },
+  "warnings": [
+    "\nFound Intel OpenMP ('libiomp') and LLVM OpenMP ('libomp') loaded at\nthe same time. Both libraries are known to be incompatible and this\ncan cause random crashes or deadlocks on Linux when loaded in the\nsame Python program.\nUsing threadpoolctl may cause crashes or deadlocks. For more\ninformation and possible workarounds, please see\n    https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md\n"
+  ]
+}

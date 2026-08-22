@@ -1,0 +1,16 @@
+{
+  "feature_names": [
+    "N_TFlossR_2kiw",
+    "N_TFlossR_2ktw",
+    "N_TFlossR_2kmw",
+    "TFResident_lossR",
+    "TFDaynight_lossR",
+    "TFAB5k_NOR",
+    "TFABC_NOR"
+  ],
+  "manifest_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing_7vars_run1\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25\\TF\\preprocessing_config.json",
+  "manifest_sha256": "00a7fb54c1de0391326f8038da570c0ea251f109f3b6d445b4f72ecbeeba4fea",
+  "matrix_sha256": "a638edc1ab757c6d4fb75e869a785ae4955e5992362da64b21ec66e52802bb8b",
+  "row_count": 13584,
+  "scenario": "TF"
+}

@@ -1,0 +1,147 @@
+{
+  "artifact_sha256": {
+    "excluded_features.csv": "64cbd5f099b7755a2e306f48a7a7717e634bf8c4480e03c2c3adac6b9c1cbdaf",
+    "features_filled.csv": "1e6d5b753757dddd44daf7412cc476a9f8b51c724420d4e41b8aee5912e274f1",
+    "features_original.csv": "79f56ddda1f768c57e9be0f2f9d2956b4b26bae02e385cad5dd3a116e5e50807",
+    "features_standardized.csv": "b489ba3ba85b40a21eda6c09ec6afa27cfb713ac8ea17637f885c39960d71523",
+    "metadata.csv": "4224144a34ad8049fabfd97229b90efd84d3e192537501dbed0ff9584f5df3b1",
+    "preprocessing_audit.csv": "91ac7a4b441b902eb6d967f255e7ac9b011e9320471144d4c482efad8155ceed",
+    "scaler_parameters.csv": "9a4b69008b1e52d9074751602fc6dedcfabb78f85e5b71b0c8dcd2db6a283727",
+    "selected_features.csv": "6598003d1ccd7931fc143aada6d421dad6fe1d90285bb7ab9d805fafd90a1eb4"
+  },
+  "created_at_utc": "2026-08-21T10:27:11.052700Z",
+  "exclusion_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_correlation\\pf\\feature_exclusions.json",
+  "exclusion_sha256": "55c1448ce95fd0a1faa1316319019233ac3b749d46b0fb2ce2b8cf67438bfc2e",
+  "feature_order": [
+    "N_PFlossR_2kiw",
+    "N_PFlossR_2ktw",
+    "N_PFlossR_2kmw",
+    "PFResident_lossR",
+    "PFDaynight_lossR",
+    "PFAB5k_NOR",
+    "PFABC_NOR"
+  ],
+  "feature_order_sha256": "22eeb2bc87da2b9acff32190cc1afb2c547c5f9ec4f4893cf2fdb1ff434db6fc",
+  "marker_rules": {
+    "PF": [
+      "^PF",
+      "^N_PF",
+      "^Per_"
+    ],
+    "TF": [
+      "^TF",
+      "^N_TF",
+      "^Tem_"
+    ],
+    "anchored": true,
+    "case_sensitive": false
+  },
+  "matrix_sha256": "b489ba3ba85b40a21eda6c09ec6afa27cfb713ac8ea17637f885c39960d71523",
+  "risk_filter": {
+    "column": "PF_Index_Risk_equal",
+    "operator": ">",
+    "threshold": 0.25
+  },
+  "scaler": {
+    "class": "sklearn.preprocessing.StandardScaler",
+    "parameters": {
+      "copy": true,
+      "with_mean": true,
+      "with_std": true
+    },
+    "statistics": [
+      {
+        "feature": "N_PFlossR_2kiw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.501806169210125,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 1342,
+        "scale": 0.5358973068675625,
+        "variance": 0.2871859235079065
+      },
+      {
+        "feature": "N_PFlossR_2ktw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.3624701987734199,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 18,
+        "scale": 0.38384604525092525,
+        "variance": 0.14733778645477535
+      },
+      {
+        "feature": "N_PFlossR_2kmw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.3684710070579859,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 391,
+        "scale": 0.42475803959139735,
+        "variance": 0.1804193921975271
+      },
+      {
+        "feature": "PFResident_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.11157374348333395,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 1633,
+        "scale": 0.2624129756398214,
+        "variance": 0.06886056978414551
+      },
+      {
+        "feature": "PFDaynight_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.09372127499794923,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 1369,
+        "scale": 0.23164384011138328,
+        "variance": 0.0536588686615481
+      },
+      {
+        "feature": "PFAB5k_NOR",
+        "filled_max": 1.0,
+        "filled_min": 0.0,
+        "mean": 0.74533444528708,
+        "original_max": 1.0,
+        "original_min": 0.0,
+        "original_null_count": 63,
+        "scale": 0.2939905262335049,
+        "variance": 0.08643042951505314
+      },
+      {
+        "feature": "PFABC_NOR",
+        "filled_max": 0.630473198717947,
+        "filled_min": 0.0,
+        "mean": 0.0813788104715932,
+        "original_max": 0.630473198717947,
+        "original_min": 0.0,
+        "original_null_count": 0,
+        "scale": 0.10720500429520287,
+        "variance": 0.011492912945934465
+      }
+    ]
+  },
+  "scenario": "PF",
+  "source_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\data\\MT_UPDATE_MS_HEV_v3_NORcleaned_pf_risk_gt_0_25.csv",
+  "source_row_count": 4100,
+  "source_sha256": "f81e0efc1acfab1f4569598b7ad63849c952f397cc0bf05922f8c86573d8452b",
+  "structural_null": {
+    "fill_value": 0.0,
+    "semantic_meaning": "no measurable change",
+    "strategy": "fill_with_constant"
+  },
+  "versions": {
+    "numpy": "2.3.3",
+    "pandas": "2.3.3",
+    "python": "3.11.14",
+    "scikit_learn": "1.7.2"
+  }
+}

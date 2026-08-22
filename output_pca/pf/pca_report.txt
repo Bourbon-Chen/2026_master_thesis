@@ -1,24 +1,28 @@
 PCA Report - PF
 ===============
 Total observations: 4100
-Variables: 6
+Variables: 10
 
 First 5 component explained variance ratios:
-  - PC1: 0.3172
-  - PC2: 0.2069
-  - PC3: 0.1660
-  - PC4: 0.1421
-  - PC5: 0.0893
+  - PC1: 0.3388
+  - PC2: 0.1943
+  - PC3: 0.1447
+  - PC4: 0.0989
+  - PC5: 0.0666
 
-First two PCs cumulative variance: 0.5241
-Largest absolute loading on PC1: PFDaynight_lossR
-Largest absolute loading on PC2: N_PFlossR_2kiw
+First two PCs cumulative variance: 0.5330
+Largest absolute loading on PC1: Per_extent
+Largest absolute loading on PC2: PFAB5k_NOR
 
 Fill-zero counts by PCA variable:
+  - Per_extent: 0
   - N_PFlossR_2kiw: 1342
+  - N_PFlossR_2ktw: 18
   - N_PFlossR_2kmw: 391
   - PFResident_lossR: 1633
   - PFDaynight_lossR: 1369
+  - PFPRM_lossR: 1841
+  - PFAB2k_NOR: 63
   - PFAB5k_NOR: 63
   - PFABC_NOR: 0
 

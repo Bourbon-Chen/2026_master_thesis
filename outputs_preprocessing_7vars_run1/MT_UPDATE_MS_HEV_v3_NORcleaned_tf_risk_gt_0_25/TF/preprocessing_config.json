@@ -1,0 +1,147 @@
+{
+  "artifact_sha256": {
+    "excluded_features.csv": "960425b50c70249fbc6f26bcb495e9080b74ee2eef515c000314ec1513a2a86e",
+    "features_filled.csv": "49a5f9a7802c591128bea471e38219dad4969bb015fe5086639e3e08200823ca",
+    "features_original.csv": "7092f68c3e23f022f03683f41a01d11b0895f737c43904ab2d219cdd5eb81dc2",
+    "features_standardized.csv": "a638edc1ab757c6d4fb75e869a785ae4955e5992362da64b21ec66e52802bb8b",
+    "metadata.csv": "143388bfb45d2bffb575b38f18ed38ce575400a4c38f51758f219a9d48db6599",
+    "preprocessing_audit.csv": "91ac7a4b441b902eb6d967f255e7ac9b011e9320471144d4c482efad8155ceed",
+    "scaler_parameters.csv": "9e934952839c5f42aee532a5d8439ba17704fcce797bbc5e3432eddea9c6d1db",
+    "selected_features.csv": "5367a9a6214b4a2da6500e1cf30ac0839ad54d7f2c9253df8bbc956ea24716d7"
+  },
+  "created_at_utc": "2026-08-21T10:27:44.471278Z",
+  "exclusion_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_correlation\\tf\\feature_exclusions.json",
+  "exclusion_sha256": "b6147f3bf75fd123cb38fcb26599286985fb1e4d66fd9964f55b800e951e47b9",
+  "feature_order": [
+    "N_TFlossR_2kiw",
+    "N_TFlossR_2ktw",
+    "N_TFlossR_2kmw",
+    "TFResident_lossR",
+    "TFDaynight_lossR",
+    "TFAB5k_NOR",
+    "TFABC_NOR"
+  ],
+  "feature_order_sha256": "207e7bfd327428048c23f1a62789b90aaa2517cb9179484ec2684f2dc52b5d99",
+  "marker_rules": {
+    "PF": [
+      "^PF",
+      "^N_PF",
+      "^Per_"
+    ],
+    "TF": [
+      "^TF",
+      "^N_TF",
+      "^Tem_"
+    ],
+    "anchored": true,
+    "case_sensitive": false
+  },
+  "matrix_sha256": "a638edc1ab757c6d4fb75e869a785ae4955e5992362da64b21ec66e52802bb8b",
+  "risk_filter": {
+    "column": "TF_Index_Risk_equal",
+    "operator": ">",
+    "threshold": 0.25
+  },
+  "scaler": {
+    "class": "sklearn.preprocessing.StandardScaler",
+    "parameters": {
+      "copy": true,
+      "with_mean": true,
+      "with_std": true
+    },
+    "statistics": [
+      {
+        "feature": "N_TFlossR_2kiw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.23090709093835876,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 4256,
+        "scale": 0.6454429143202796,
+        "variance": 0.4165965556462557
+      },
+      {
+        "feature": "N_TFlossR_2ktw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.20576932718431099,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 7,
+        "scale": 0.6326962441687136,
+        "variance": 0.40030453738519645
+      },
+      {
+        "feature": "N_TFlossR_2kmw",
+        "filled_max": 1.0,
+        "filled_min": -1.0,
+        "mean": -0.34361531657635425,
+        "original_max": 1.0,
+        "original_min": -1.0,
+        "original_null_count": 357,
+        "scale": 0.7009566847549631,
+        "variance": 0.4913402739026687
+      },
+      {
+        "feature": "TFResident_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.18772119217875738,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 5595,
+        "scale": 0.36726016886390195,
+        "variance": 0.13488003163394177
+      },
+      {
+        "feature": "TFDaynight_lossR",
+        "filled_max": 0.0,
+        "filled_min": -1.0,
+        "mean": -0.22993235335813703,
+        "original_max": 0.0,
+        "original_min": -1.0,
+        "original_null_count": 4919,
+        "scale": 0.39031171356320493,
+        "variance": 0.1523432337446453
+      },
+      {
+        "feature": "TFAB5k_NOR",
+        "filled_max": 1.0,
+        "filled_min": 0.0,
+        "mean": 0.7724579651973192,
+        "original_max": 1.0,
+        "original_min": 0.0,
+        "original_null_count": 439,
+        "scale": 0.26755948002328267,
+        "variance": 0.0715880753503294
+      },
+      {
+        "feature": "TFABC_NOR",
+        "filled_max": 0.838900276696294,
+        "filled_min": 0.0,
+        "mean": 0.0881495247383696,
+        "original_max": 0.838900276696294,
+        "original_min": 0.0,
+        "original_null_count": 0,
+        "scale": 0.11562944729818445,
+        "variance": 0.013370169082483613
+      }
+    ]
+  },
+  "scenario": "TF",
+  "source_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\data\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25.csv",
+  "source_row_count": 13584,
+  "source_sha256": "59556c212befec4e1f0fe602334c43d5ba910cba667ec64ee3d6a46cd7d161bf",
+  "structural_null": {
+    "fill_value": 0.0,
+    "semantic_meaning": "no measurable change",
+    "strategy": "fill_with_constant"
+  },
+  "versions": {
+    "numpy": "2.3.3",
+    "pandas": "2.3.3",
+    "python": "3.11.14",
+    "scikit_learn": "1.7.2"
+  }
+}

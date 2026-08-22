@@ -1,15 +1,19 @@
 {
   "feature_names": [
+    "Tem_extent",
     "N_TFlossR_2kiw",
+    "N_TFlossR_2ktw",
     "N_TFlossR_2kmw",
     "TFResident_lossR",
     "TFDaynight_lossR",
+    "TFPRM_lossR",
+    "TFAB2k_NOR",
     "TFAB5k_NOR",
     "TFABC_NOR"
   ],
-  "manifest_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25\\TF\\preprocessing_config.json",
-  "manifest_sha256": "2091520420c33b80e6c3801a28bffbbb53b63b86949369c99f7c92e0958d42f9",
-  "matrix_sha256": "dad01e4e91f9db5a7da19c7341af96535f34276c4e602fa419db6db6ebd5f842",
+  "manifest_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing_ab_filtered\\MT_UPDATE_MS_HEV_v3_NORcleaned_tf_risk_gt_0_25\\TF\\preprocessing_config.json",
+  "manifest_sha256": "30333d2da739e4524de51dbd8283d8ee1d2ee72b6bca065101b392925cbf2b73",
+  "matrix_sha256": "8bd547e5fa46cc311df379ac346a57e8eefd2256725a7aa908ea91cfeb83ad23",
   "row_count": 13584,
   "scenario": "TF"
 }

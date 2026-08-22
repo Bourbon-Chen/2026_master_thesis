@@ -1,0 +1,142 @@
+K-means experiment report
+=========================
+Scenario: PF
+Prepared artifact: F:\CTH-MPDSD\Year 2-period 2\ACEX35\Codes\rf_demo\outputs_preprocessing_7vars_run1\MT_UPDATE_MS_HEV_v3_NORcleaned_pf_risk_gt_0_25\PF
+Output directory: F:\CTH-MPDSD\Year 2-period 2\ACEX35\Codes\rf_demo\output_kmeans_7vars_run1\pf_k3_v7_kmeanspp_n50_mi500_rs42
+K: 3
+Features (7): N_PFlossR_2kiw, N_PFlossR_2ktw, N_PFlossR_2kmw, PFResident_lossR, PFDaynight_lossR, PFAB5k_NOR, PFABC_NOR
+
+Sample counts
+- Original: 4100
+- Valid: 4100
+- Removed: 0
+
+Excluded columns
+- fid: nan
+- MS_ID: nan
+- Per_extent: explicit_research_exclusion
+- Tem_extent: nan
+- Street_type_NOR: nan
+- Resident_NOR: nan
+- DayNight_NOR: nan
+- PRM_NOR: nan
+- Index_population: nan
+- PF_Index_acc_loss: nan
+- PFPRM_lossR: explicit_research_exclusion
+- PF_Index_population: nan
+- PFAB2k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- N_PFAB2k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- PFAB2k_NOR: explicit_research_exclusion
+- PFAB5k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- N_PFAB5k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- PF_Index_centrality: nan
+- PF_Index_V_equal: nan
+- N_TFlossR_2kiw: nan
+- N_TFlossR_2ktw: nan
+- N_TFlossR_2kmw: nan
+- TF_Index_acc_loss: nan
+- TFResident_lossR: nan
+- TFDaynight_lossR: nan
+- TFPRM_lossR: nan
+- TF_Index_population: nan
+- TFAB2k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- N_TFAB2k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- TFAB2k_NOR: nan
+- TFAB5k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- N_TFAB5k_lossR: raw_ab_lossR_replaced_by_normalized_NOR
+- TFAB5k_NOR: nan
+- TFABC_NOR: nan
+- TF_Index_centrality: nan
+- TF_Index_V_equal: nan
+- PF_Index_Risk_equal: nan
+- TF_Index_Risk_equal: nan
+
+Missing-data treatment
+- Policy: Prepared structural nulls retained.
+- N_PFlossR_2kiw: 1342 missing value(s)
+- N_PFlossR_2ktw: 18 missing value(s)
+- N_PFlossR_2kmw: 391 missing value(s)
+- PFResident_lossR: 1633 missing value(s)
+- PFDaynight_lossR: 1369 missing value(s)
+- PFAB5k_NOR: 63 missing value(s)
+
+Data-quality issues
+- None
+
+Scaling
+The input data had already been standardized with StandardScaler.
+This script did not apply StandardScaler or any other scaling transformation.
+
+K-means settings
+- init: k-means++
+- n_init: 50
+- max_iter: 500
+- random_state: 42
+- algorithm: lloyd
+- tolerance: 0.0001
+- iterations: 16
+- converged: True
+- fit seconds: 6.93498
+
+Cluster label ordering
+- Rule: centroid PC1 projection
+
+Cluster membership
+- Cluster 1: 1979 samples (48.27%)
+- Cluster 2: 1937 samples (47.24%)
+- Cluster 3: 184 samples (4.49%)
+
+Model metrics
+- inertia: 18605.5
+- silhouette_score: 0.252901
+- calinski_harabasz_score: 1111.43
+- davies_bouldin_score: 1.49307
+
+PCA explained variance
+- PC1: 32.2038%
+- PC2: 19.8848%
+- PC1 + PC2: 52.0886%
+
+Persisted staging-complete runtime: 9.101 seconds
+Runtime scope: start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication
+End-to-end runtime, including the final metadata rewrite and atomic publication, is printed in the terminal.
+
+Timestamps
+- Started: 2026-08-21T12:42:58+02:00
+- Artifact snapshot: 2026-08-21T12:43:07+02:00
+- Snapshot scope: start through the complete first metadata pass inside staging; excludes the final metadata rewrite and atomic final-directory publication
+- Execution timestamp: 2026-08-21T12:43:07+02:00
+
+Software versions
+- Python: 3.11.14
+- pandas: 2.3.3
+- NumPy: 2.3.3
+- scikit-learn: 1.7.2
+
+Warnings
+- 
+Found Intel OpenMP ('libiomp') and LLVM OpenMP ('libomp') loaded at
+the same time. Both libraries are known to be incompatible and this
+can cause random crashes or deadlocks on Linux when loaded in the
+same Python program.
+Using threadpoolctl may cause crashes or deadlocks. For more
+information and possible workarounds, please see
+    https://github.com/joblib/threadpoolctl/blob/master/multiple_openmp.md
+
+
+Output files
+- clustered_data.csv
+- cluster_summary.csv
+- cluster_centroids_standardized.csv
+- cluster_centroids_original_scale.csv
+- cluster_feature_profile.csv
+- sample_distances.csv
+- model_metrics.csv
+- cluster_label_mapping.csv
+- preprocessing_audit.csv
+- run_config.json
+- run_report.txt
+- pca_cluster_scatter.png
+- cluster_size_bar.png
+- cluster_centroid_heatmap.png
+- cluster_feature_profiles.png

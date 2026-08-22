@@ -1,0 +1,29 @@
+PCA Report - PF
+===============
+Total observations: 4100
+Variables: 7
+
+First 5 component explained variance ratios:
+  - PC1: 0.3220
+  - PC2: 0.1988
+  - PC3: 0.1611
+  - PC4: 0.1363
+  - PC5: 0.0766
+
+First two PCs cumulative variance: 0.5209
+Largest absolute loading on PC1: N_PFlossR_2kmw
+Largest absolute loading on PC2: PFAB5k_NOR
+
+Fill-zero counts by PCA variable:
+  - N_PFlossR_2kiw: 1342
+  - N_PFlossR_2ktw: 18
+  - N_PFlossR_2kmw: 391
+  - PFResident_lossR: 1633
+  - PFDaynight_lossR: 1369
+  - PFAB5k_NOR: 63
+  - PFABC_NOR: 0
+
+PCA is diagnostic and summarizes the prepared clustering geometry.
+K-means does not consume PCA scores; it consumes the same prepared standardized matrix directly.
+
+The first two principal components only capture part of the data variance.

@@ -1,15 +1,19 @@
 {
   "feature_names": [
+    "Per_extent",
     "N_PFlossR_2kiw",
+    "N_PFlossR_2ktw",
     "N_PFlossR_2kmw",
     "PFResident_lossR",
     "PFDaynight_lossR",
+    "PFPRM_lossR",
+    "PFAB2k_NOR",
     "PFAB5k_NOR",
     "PFABC_NOR"
   ],
-  "manifest_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing\\MT_UPDATE_MS_HEV_v3_NORcleaned_pf_risk_gt_0_25\\PF\\preprocessing_config.json",
-  "manifest_sha256": "f0fcf401ab0a8c588f9ed3da2fa9c7c0f6257a79429d95f35860889fddab0b33",
-  "matrix_sha256": "cc09f145af4a8049225873004a280b97544cc3b51668873b0b26811e6b814e5f",
+  "manifest_path": "F:\\CTH-MPDSD\\Year 2-period 2\\ACEX35\\Codes\\rf_demo\\outputs_preprocessing_ab_filtered\\MT_UPDATE_MS_HEV_v3_NORcleaned_pf_risk_gt_0_25\\PF\\preprocessing_config.json",
+  "manifest_sha256": "f3c6dcd36ad6342eef860775142ee7645c94e20bac454d6dd72691fb181000bf",
+  "matrix_sha256": "2294ba68b632112ffa5fefdf56c370674f5d3754a054acbf9de93e3a923070a4",
   "row_count": 4100,
   "scenario": "PF"
 }

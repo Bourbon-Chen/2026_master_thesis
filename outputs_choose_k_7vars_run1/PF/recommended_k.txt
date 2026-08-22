@@ -1,0 +1,18 @@
+K-means K Recommendation
+========================
+Silhouette sample size: 10000
+
+Metric-specific best K:
+  - Elbow: K=5
+  - Silhouette: K=2
+  - Calinski-Harabasz: K=10
+  - Davies-Bouldin: K=2
+
+Recommended K: 2
+2 out of four evaluation metrics suggest K=2.
+
+Candidate cluster-size diagnostics:
+  - Minimum candidate cluster size: 73
+  - Maximum candidate cluster size: 3932
+
+The final K remains a documented research choice, informed by these diagnostics and substantive interpretation.
